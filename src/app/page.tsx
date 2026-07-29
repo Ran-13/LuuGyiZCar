@@ -71,7 +71,9 @@ export default async function HomePage() {
         />
       )}
 
-      <AdBanner banner={ads.banners["home-bottom"]} className="mt-8" />
+      {/* Spacer so fixed bottom banner doesn't overlap content */}
+      {ads.banners["home-bottom"]?.enabled && <div className="h-20" />}
+      <AdBanner banner={ads.banners["home-bottom"]} sticky />
     </>
   );
 }

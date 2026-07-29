@@ -43,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col bg-ink-950">
         <Header siteName={ads.site.siteName} />
-        <main className="mx-auto w-full max-w-[1800px] flex-1 px-3 py-5 sm:px-5 sm:py-7">
+        <main className="w-full flex-1 px-3 py-5 sm:px-5 sm:py-7">
           {children}
         </main>
         <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
