@@ -91,13 +91,16 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
     setUploading(slot);
     setStatus("");
     try {
-      const body = new FormData();
-      body.set("file", file);
-      body.set("slot", slot);
       const res = await fetch(adminApiUrl("/upload"), {
         method: "POST",
         credentials: "same-origin",
-        body,
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+          "X-Upload-Filename": file.name,
+          "X-Upload-Type": file.type || "application/octet-stream",
+          "X-Upload-Slot": slot,
+        },
+        body: file,
       });
       const data = (await res.json()) as { imageUrl?: string; error?: string };
       if (!res.ok || !data.imageUrl) {

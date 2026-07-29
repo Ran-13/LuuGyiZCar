@@ -1,9 +1,7 @@
-import Busboy from "busboy";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
-import { Readable } from "stream";
 import { UPLOAD_DIR, UPLOAD_PUBLIC_PREFIX } from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
 
@@ -74,67 +72,27 @@ interface ParsedUpload {
   buffer: Buffer;
 }
 
-async function parseMultipartUpload(request: Request): Promise<ParsedUpload> {
+async function parseDirectUpload(request: Request): Promise<ParsedUpload> {
   if (!request.body) {
     throw new Error("Missing request body");
   }
 
-  const headers = Object.fromEntries(request.headers.entries());
-  const busboy = Busboy({ headers });
+  const slot = request.headers.get("x-upload-slot") ?? "banner";
+  const mimeType = request.headers.get("x-upload-type") ?? request.headers.get("content-type") ?? "";
 
-  let slot = "banner";
-  let mimeType = "";
-  let size = 0;
-  let tooLarge = false;
-  let fileFound = false;
-  const chunks: Buffer[] = [];
+  if (!mimeType) {
+    throw new Error("Missing upload content type");
+  }
 
-  return new Promise<ParsedUpload>((resolve, reject) => {
-    busboy.on("field", (name, value) => {
-      if (name === "slot") slot = value;
-    });
+  const buffer = Buffer.from(await request.arrayBuffer());
+  if (buffer.length === 0) {
+    throw new Error("Missing file");
+  }
+  if (buffer.length > MAX_BYTES) {
+    throw new Error("File too large (max 100MB)");
+  }
 
-    busboy.on("file", (name, file, info) => {
-      if (name !== "file") {
-        file.resume();
-        return;
-      }
-
-      fileFound = true;
-      mimeType = info.mimeType;
-
-      file.on("data", (chunk: Buffer) => {
-        if (tooLarge) return;
-        size += chunk.length;
-        if (size > MAX_BYTES) {
-          tooLarge = true;
-          return;
-        }
-        chunks.push(Buffer.from(chunk));
-      });
-
-      file.on("error", reject);
-    });
-
-    busboy.on("error", reject);
-    busboy.on("finish", () => {
-      if (!fileFound) {
-        reject(new Error("Missing file"));
-        return;
-      }
-      if (tooLarge) {
-        reject(new Error("File too large (max 100MB)"));
-        return;
-      }
-      resolve({
-        slot,
-        mimeType,
-        buffer: Buffer.concat(chunks),
-      });
-    });
-
-    Readable.fromWeb(request.body as never).pipe(busboy);
-  });
+  return { slot, mimeType, buffer };
 }
 
 export async function POST(request: Request) {
@@ -143,9 +101,9 @@ export async function POST(request: Request) {
 
   let upload: ParsedUpload;
   try {
-    upload = await parseMultipartUpload(request);
+    upload = await parseDirectUpload(request);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid form data";
+    const message = error instanceof Error ? error.message : "Invalid upload";
     const status = message.includes("too large") ? 413 : 400;
     return NextResponse.json({ error: message }, { status });
   }
