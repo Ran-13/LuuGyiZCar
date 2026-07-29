@@ -10,6 +10,7 @@ import GridSkeleton from "@/components/GridSkeleton";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
 import ShareButton from "@/components/ShareButton";
+import VideoEmbed from "@/components/VideoEmbed";
 import WatchHistoryRecorder from "@/components/WatchHistoryRecorder";
 import { readAdsConfig } from "@/lib/ads";
 import {
@@ -129,16 +130,8 @@ export default async function VideoPage({ params }: PageProps) {
       <div>
         {/* Full width, but never taller than the viewport — at very wide sizes the
             16:9 box would otherwise push the title and tags off screen. */}
-        <div className="relative mx-auto aspect-video w-full max-w-[calc(82vh*16/9)] overflow-hidden rounded-lg bg-black">
-          <iframe
-            src={video.embed}
-            title={video.title}
-            className="absolute inset-0 h-full w-full"
-            allow="autoplay; fullscreen; encrypted-media"
-            allowFullScreen
-            referrerPolicy="no-referrer"
-            loading="eager"
-          />
+        <div className="relative mx-auto aspect-video w-full max-w-[calc(82vh*16/9)] overflow-hidden rounded-lg bg-ink-900">
+          <VideoEmbed src={video.embed} title={video.title} />
         </div>
 
         <h1 className="mt-4 text-lg leading-snug font-bold text-ink-100 sm:text-xl">

@@ -17,11 +17,11 @@ function queueAdServe(): void {
 }
 
 /**
- * Loads ExoClick's shared provider script once per page.
+ * Loads ExoClick ad-provider.js once.
  *
- * When any interstitial zone is active we use `afterInteractive` (not
- * lazyOnload) so the click interceptor is ready before the user taps a video
- * card. Soft-nav + a late script = interstitial never fires.
+ * Interstitial dashboard tags use a.pemsrv.com — use that host when any
+ * interstitial zone is enabled so the script matches the zone's serving path.
+ * Load afterInteractive so link-click handlers exist before the first tap.
  */
 export default function ExoClickProvider({ network }: { network: AdNetworkConfig }) {
   if (!network?.enabled) return null;
@@ -34,10 +34,14 @@ export default function ExoClickProvider({ network }: { network: AdNetworkConfig
     return zone?.enabled && isValidZoneId(zone.zoneId);
   });
 
+  const src = hasInterstitial
+    ? "https://a.pemsrv.com/ad-provider.js"
+    : "https://a.magsrv.com/ad-provider.js";
+
   return (
     <Script
       id="exoclick-ad-provider"
-      src="https://a.magsrv.com/ad-provider.js"
+      src={src}
       strategy={hasInterstitial ? "afterInteractive" : "lazyOnload"}
       onLoad={queueAdServe}
     />

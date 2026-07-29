@@ -21,14 +21,18 @@ function queueAdServe(): void {
 }
 
 /**
- * ExoClick fullpage interstitial tags.
+ * ExoClick Fullpage Interstitial — matches dashboard async tags:
  *
- * Dashboard tags use ad-provider.js + <ins class data-zoneid> (same as banners).
- * Each zone often has its own ins class — resolved per zone.
+ *   <script src="https://a.pemsrv.com/ad-provider.js"></script>
+ *   <ins class="eas…" data-zoneid="…"></ins>
+ *   <script>AdProvider.push({serve:{}})</script>
  *
- * Must live on LISTING pages. Video cards use a real <a href> (hard navigation)
- * so ExoClick's "Clicking on Links" trigger can intercept before the browser
- * leaves the page. Next.js <Link> soft-nav skips that and the ad never shows.
+ * Must stay in the DOM for the whole listing-page session. Do NOT hide/remove
+ * the <ins> based on height — interstitial hooks are intentionally empty until
+ * a link click; a watchdog that does `display:none` when height≈0 kills the
+ * click interceptor (the previous bug).
+ *
+ * Video cards use a real <a href> (hard navigation) so "Clicking on Links" can fire.
  */
 export default function ExoClickInterstitial({ network }: { network: AdNetworkConfig }) {
   const active = INTERSTITIAL_SLOTS.filter((slot) => {
@@ -49,11 +53,14 @@ export default function ExoClickInterstitial({ network }: { network: AdNetworkCo
     if (servedKey.current === key) return;
     servedKey.current = key;
 
-    // Serve now (AdProvider queues if the script is still loading) and once more
-    // shortly after, in case lazy script arrival raced the first push.
     queueAdServe();
-    const t = window.setTimeout(queueAdServe, 800);
-    return () => window.clearTimeout(t);
+    // Script may still be loading — queue again when it arrives / shortly after.
+    const t1 = window.setTimeout(queueAdServe, 400);
+    const t2 = window.setTimeout(queueAdServe, 1500);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [key]);
 
   if (active.length === 0) return null;
@@ -63,10 +70,21 @@ export default function ExoClickInterstitial({ network }: { network: AdNetworkCo
       {active.map((slot) => {
         const zone = network.zones[slot];
         return (
+          // Off-screen hook only — must remain in the DOM and must NOT use
+          // pointer-events-none (that blocked ExoClick's click capture).
           <ins
             key={slot}
             className={resolveInsClass(zone, network)}
             data-zoneid={zone.zoneId}
+            data-exo-interstitial={slot}
+            style={{
+              position: "absolute",
+              left: "-10000px",
+              top: "0",
+              width: "1px",
+              height: "1px",
+              overflow: "hidden",
+            }}
           />
         );
       })}
