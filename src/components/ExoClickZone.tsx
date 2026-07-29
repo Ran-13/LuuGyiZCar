@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { AdNetworkConfig, NetworkSlotId } from "@/lib/ads-types";
-import { isValidZoneId } from "@/lib/ads-types";
+import { EXOCLICK_INS_CLASS, isValidZoneId } from "@/lib/ads-types";
 
 declare global {
   interface Window {
@@ -50,8 +50,7 @@ export default function ExoClickZone({ network, slot, className = "" }: Props) {
       aria-label="Advertisement"
       className={`flex justify-center overflow-hidden ${className}`}
     >
-      {/* Class name is ExoClick's own hook — it must match exactly. */}
-      <ins className="eas6a97888e" data-zoneid={zoneId} />
+      <ins className={EXOCLICK_INS_CLASS} data-zoneid={zoneId} />
     </aside>
   );
 }

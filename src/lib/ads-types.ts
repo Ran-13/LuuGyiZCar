@@ -69,6 +69,15 @@ export interface AdNetworkConfig {
 /** Meta tag name ExoClick looks for when verifying domain ownership. */
 export const EXOCLICK_VERIFICATION_META = "6a97888e-site-verification";
 
+/**
+ * Class name ExoClick's ad-provider.js scans for when placing a zone.
+ *
+ * Must match the tag issued in the ExoClick dashboard exactly. The `6a97888e`
+ * segment is the same platform identifier used by EXOCLICK_VERIFICATION_META.
+ * If an account ever issues a different class, change it here.
+ */
+export const EXOCLICK_INS_CLASS = "eas6a97888e2";
+
 /** Verification codes are hex-ish tokens; reject anything that could break markup. */
 export function isValidVerificationCode(value: string): boolean {
   return /^[A-Za-z0-9_-]{8,128}$/.test(value);

@@ -11,16 +11,16 @@
         "id": "vip",
         "enabled": true,
         "title": "VIP Announcement",
-        "text": "မြန်မာ solo / မြန်မာချောင်းရိုက် / ကလေးကား /\nမြန်မာlocal leak/Yoon May/စစ်ဗိုလ်မိန်းမ/tiktok cele\nHD တိုကို တစ်သက်စာ Vip ကြေး 8999ကျပ်ဖြင့်\nဝယ်ယူကြည့်ရှုနိုင်ပါပြီ",
-        "contactLabel": "ဆက်သွယ်ရန် admin♠️",
+        "text": "\u1019\u103c\u1014\u103a\u1019\u102c solo / \u1019\u103c\u1014\u103a\u1019\u102c\u1001\u103b\u1031\u102c\u1004\u103a\u1038\u101b\u102d\u102f\u1000\u103a / \u1000\u101c\u1031\u1038\u1000\u102c\u1038 /\n\u1019\u103c\u1014\u103a\u1019\u102clocal leak/Yoon May/\u1005\u1005\u103a\u1017\u102d\u102f\u101c\u103a\u1019\u102d\u1014\u103a\u1038\u1019/tiktok cele\nHD \u1010\u102d\u102f\u1000\u102d\u102f \u1010\u1005\u103a\u101e\u1000\u103a\u1005\u102c Vip \u1000\u103c\u1031\u1038 8999\u1000\u103b\u1015\u103a\u1016\u103c\u1004\u103a\u1037\n\u101d\u101a\u103a\u101a\u1030\u1000\u103c\u100a\u103a\u1037\u101b\u103e\u102f\u1014\u102d\u102f\u1004\u103a\u1015\u102b\u1015\u103c\u102e",
+        "contactLabel": "\u1006\u1000\u103a\u101e\u103d\u101a\u103a\u101b\u1014\u103a admin\u2660\ufe0f",
         "contactUrl": "https://t.me/VVIPMEMEBR"
       }
     ],
     "showInline": true,
-    "text": "မြန်မာ solo / မြန်မာချောင်းရိုက် / ကလေးကား /\nမြန်မာlocal leak/Yoon May/စစ်ဗိုလ်မိန်းမ/tiktok cele\nHD တိုကို တစ်သက်စာ Vip ကြေး 8999ကျပ်ဖြင့်\nဝယ်ယူကြည့်ရှုနိုင်ပါပြီ",
-    "contactLabel": "ဆက်သွယ်ရန် admin♠️",
+    "text": "\u1019\u103c\u1014\u103a\u1019\u102c solo / \u1019\u103c\u1014\u103a\u1019\u102c\u1001\u103b\u1031\u102c\u1004\u103a\u1038\u101b\u102d\u102f\u1000\u103a / \u1000\u101c\u1031\u1038\u1000\u102c\u1038 /\n\u1019\u103c\u1014\u103a\u1019\u102clocal leak/Yoon May/\u1005\u1005\u103a\u1017\u102d\u102f\u101c\u103a\u1019\u102d\u1014\u103a\u1038\u1019/tiktok cele\nHD \u1010\u102d\u102f\u1000\u102d\u102f \u1010\u1005\u103a\u101e\u1000\u103a\u1005\u102c Vip \u1000\u103c\u1031\u1038 8999\u1000\u103b\u1015\u103a\u1016\u103c\u1004\u103a\u1037\n\u101d\u101a\u103a\u101a\u1030\u1000\u103c\u100a\u103a\u1037\u101b\u103e\u102f\u1014\u102d\u102f\u1004\u103a\u1015\u102b\u1015\u103c\u102e",
+    "contactLabel": "\u1006\u1000\u103a\u101e\u103d\u101a\u103a\u101b\u1014\u103a admin\u2660\ufe0f",
     "contactUrl": "https://t.me/VVIPMEMEBR",
-    "adsLabel": "ကြော်ငြာထည့်သွင်းလိုပါက admin 👉",
+    "adsLabel": "\u1000\u103c\u1031\u102c\u103a\u1004\u103c\u102c\u1011\u100a\u1037\u103a\u101e\u103d\u1004\u103a\u1038\u101c\u102d\u102f\u1015\u102b\u1000 admin \ud83d\udc49",
     "adsContact": "@VVIPMEMEBR",
     "adsContactUrl": "https://t.me/VVIPMEMEBR"
   },
@@ -44,5 +44,24 @@
       "alt": "Advertisement"
     }
   },
-  "updatedAt": "2026-07-29T06:00:00.000Z"
+  "updatedAt": "2026-07-29T06:00:00.000Z",
+  "network": {
+    "enabled": true,
+    "zones": {
+      "net-home-top": {
+        "enabled": true,
+        "zoneId": "5989710"
+      },
+      "net-home-bottom": {
+        "enabled": false,
+        "zoneId": ""
+      },
+      "net-video-below": {
+        "enabled": false,
+        "zoneId": ""
+      }
+    },
+    "popunderZoneId": "",
+    "verificationCode": ""
+  }
 }
