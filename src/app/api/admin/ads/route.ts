@@ -1,6 +1,13 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { AD_SLOTS, type AdsConfig, type AdSlotId, readAdsConfig, writeAdsConfig } from "@/lib/ads";
+import {
+  AD_SLOTS,
+  type AdsConfig,
+  type AdSlotId,
+  type AnnouncementDialogItem,
+  readAdsConfig,
+  writeAdsConfig,
+} from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
 
 export async function GET(request: Request) {
@@ -48,6 +55,19 @@ export async function PUT(request: Request) {
     ...current.announcement,
     ...(body.announcement ?? {}),
   };
+  const dialogs = Array.isArray(announcement.dialogs)
+    ? announcement.dialogs.map((dialog, index) => ({
+        id:
+          typeof dialog?.id === "string" && dialog.id.trim()
+            ? dialog.id.trim()
+            : `dialog-${index + 1}`,
+        enabled: dialog?.enabled !== false,
+        title: String(dialog?.title ?? ""),
+        text: String(dialog?.text ?? ""),
+        contactLabel: String(dialog?.contactLabel ?? ""),
+        contactUrl: String(dialog?.contactUrl ?? ""),
+      }))
+    : ([] as AnnouncementDialogItem[]);
 
   const saved = await writeAdsConfig({
     site: {
@@ -56,6 +76,7 @@ export async function PUT(request: Request) {
     announcement: {
       enabled: Boolean(announcement.enabled),
       showDialog: announcement.showDialog !== false,
+      dialogs,
       showInline: announcement.showInline !== false,
       text: String(announcement.text ?? ""),
       contactLabel: String(announcement.contactLabel ?? ""),

@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { AD_SLOTS, type AdsConfig, type AdSlotId } from "@/lib/ads-types";
+import {
+  AD_SLOTS,
+  type AdsConfig,
+  type AdSlotId,
+  type AnnouncementDialogItem,
+} from "@/lib/ads-types";
 import { adminApiUrl } from "@/lib/admin-path";
 
 interface AdminAdsPanelProps {
@@ -32,6 +37,51 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
       banners: {
         ...prev.banners,
         [slot]: { ...prev.banners[slot], ...patch },
+      },
+    }));
+  }
+
+  function updateDialog(
+    dialogId: string,
+    patch: Partial<AnnouncementDialogItem>,
+  ) {
+    setConfig((prev) => ({
+      ...prev,
+      announcement: {
+        ...prev.announcement,
+        dialogs: prev.announcement.dialogs.map((dialog) =>
+          dialog.id === dialogId ? { ...dialog, ...patch } : dialog,
+        ),
+      },
+    }));
+  }
+
+  function addDialog() {
+    setConfig((prev) => ({
+      ...prev,
+      announcement: {
+        ...prev.announcement,
+        dialogs: [
+          ...prev.announcement.dialogs,
+          {
+            id: `dialog-${Date.now()}`,
+            enabled: true,
+            title: "",
+            text: "",
+            contactLabel: "",
+            contactUrl: "",
+          },
+        ],
+      },
+    }));
+  }
+
+  function removeDialog(dialogId: string) {
+    setConfig((prev) => ({
+      ...prev,
+      announcement: {
+        ...prev.announcement,
+        dialogs: prev.announcement.dialogs.filter((dialog) => dialog.id !== dialogId),
       },
     }));
   }
@@ -217,6 +267,91 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
               className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
             />
           </label>
+        </div>
+
+        <div className="mt-5 border-t border-ink-700 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-medium text-ink-100">Popup dialogs</h3>
+              <p className="mt-1 text-xs text-ink-400">
+                Add multiple popup announcements. They show in sequence on each page load.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addDialog}
+              className="rounded-md border border-ink-700 px-3 py-1.5 text-sm text-ink-200 hover:bg-ink-800"
+            >
+              Add dialog
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            {config.announcement.dialogs.map((dialog, idx) => (
+              <div key={dialog.id} className="rounded-md border border-ink-700 bg-ink-950 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-ink-100">Dialog {idx + 1}</p>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-ink-300">
+                      <input
+                        type="checkbox"
+                        checked={dialog.enabled}
+                        onChange={(e) => updateDialog(dialog.id, { enabled: e.target.checked })}
+                      />
+                      Enabled
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeDialog(dialog.id)}
+                      className="text-sm text-red-300 hover:text-red-200"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm text-ink-300 sm:col-span-2">
+                    Title
+                    <input
+                      value={dialog.title}
+                      onChange={(e) => updateDialog(dialog.id, { title: e.target.value })}
+                      placeholder="VIP Announcement"
+                      className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+                    />
+                  </label>
+                  <label className="block text-sm text-ink-300 sm:col-span-2">
+                    Message
+                    <textarea
+                      value={dialog.text}
+                      onChange={(e) => updateDialog(dialog.id, { text: e.target.value })}
+                      rows={4}
+                      className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+                    />
+                  </label>
+                  <label className="block text-sm text-ink-300">
+                    Contact label
+                    <input
+                      value={dialog.contactLabel}
+                      onChange={(e) =>
+                        updateDialog(dialog.id, { contactLabel: e.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+                    />
+                  </label>
+                  <label className="block text-sm text-ink-300">
+                    Contact URL
+                    <input
+                      value={dialog.contactUrl}
+                      onChange={(e) => updateDialog(dialog.id, { contactUrl: e.target.value })}
+                      placeholder="https://t.me/..."
+                      className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

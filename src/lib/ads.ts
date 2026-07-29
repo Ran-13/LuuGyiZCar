@@ -8,10 +8,18 @@ import {
   type AdsConfig,
   type AdSlotId,
   type AnnouncementConfig,
+  type AnnouncementDialogItem,
   type SiteConfig,
 } from "@/lib/ads-types";
 
-export type { AdBannerConfig, AdsConfig, AdSlotId, AnnouncementConfig, SiteConfig };
+export type {
+  AdBannerConfig,
+  AdsConfig,
+  AdSlotId,
+  AnnouncementConfig,
+  AnnouncementDialogItem,
+  SiteConfig,
+};
 export { AD_SLOTS, DEFAULT_ADS_CONFIG, isSlotId };
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -29,15 +37,53 @@ function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConf
   };
 }
 
+function normalizeDialog(
+  raw: Partial<AnnouncementDialogItem> | undefined,
+  fallbackId: string,
+): AnnouncementDialogItem {
+  return {
+    id: typeof raw?.id === "string" && raw.id.trim() ? raw.id.trim() : fallbackId,
+    enabled: raw?.enabled !== false,
+    title: typeof raw?.title === "string" ? raw.title.trim() : "",
+    text: typeof raw?.text === "string" ? raw.text : "",
+    contactLabel: typeof raw?.contactLabel === "string" ? raw.contactLabel : "",
+    contactUrl: typeof raw?.contactUrl === "string" ? raw.contactUrl : "",
+  };
+}
+
 function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig {
   const site: Partial<SiteConfig> = raw?.site ?? {};
   const announcement: Partial<AnnouncementConfig> = raw?.announcement ?? {};
   const bannersIn: Partial<Record<AdSlotId, Partial<AdBannerConfig>>> = raw?.banners ?? {};
+  const rawDialogs = Array.isArray(announcement.dialogs) ? announcement.dialogs : [];
 
   const banners = { ...DEFAULT_ADS_CONFIG.banners };
   for (const slot of AD_SLOTS) {
     banners[slot.id] = normalizeBanner(bannersIn[slot.id]);
   }
+
+  const fallbackDialog = {
+    id: "vip",
+    enabled: announcement.enabled !== false,
+    title: "VIP Announcement",
+    text:
+      typeof announcement.text === "string" && announcement.text.trim()
+        ? announcement.text
+        : DEFAULT_ADS_CONFIG.announcement.text,
+    contactLabel:
+      typeof announcement.contactLabel === "string"
+        ? announcement.contactLabel
+        : DEFAULT_ADS_CONFIG.announcement.contactLabel,
+    contactUrl:
+      typeof announcement.contactUrl === "string"
+        ? announcement.contactUrl
+        : DEFAULT_ADS_CONFIG.announcement.contactUrl,
+  } satisfies AnnouncementDialogItem;
+
+  const dialogs =
+    rawDialogs.length > 0
+      ? rawDialogs.map((dialog, index) => normalizeDialog(dialog, `dialog-${index + 1}`))
+      : [fallbackDialog];
 
   return {
     site: {
@@ -49,6 +95,7 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
     announcement: {
       enabled: announcement.enabled !== false,
       showDialog: announcement.showDialog !== false,
+      dialogs,
       showInline: announcement.showInline !== false,
       text:
         typeof announcement.text === "string" && announcement.text.trim()

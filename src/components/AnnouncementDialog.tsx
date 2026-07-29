@@ -20,14 +20,18 @@ export default function AnnouncementDialog({ announcement }: AnnouncementDialogP
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [index, setIndex] = useState(0);
+  const dialogs = announcement.dialogs.filter((dialog) => dialog.enabled && dialog.text.trim());
+  const current = dialogs[index];
 
   useEffect(() => {
-    if (!announcement.enabled || !announcement.showDialog || !announcement.text.trim()) {
+    if (!announcement.enabled || !announcement.showDialog || dialogs.length === 0) {
       return;
     }
 
+    setIndex(0);
     setOpen(true);
-  }, [announcement.enabled, announcement.showDialog, announcement.text]);
+  }, [announcement.enabled, announcement.showDialog, dialogs.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -51,9 +55,17 @@ export default function AnnouncementDialog({ announcement }: AnnouncementDialogP
     setOpen(false);
   }
 
-  if (!open) return null;
+  function next() {
+    if (index >= dialogs.length - 1) {
+      setOpen(false);
+      return;
+    }
+    setIndex((value) => value + 1);
+  }
 
-  const handle = telegramHandle(announcement.contactUrl, announcement.adsContact);
+  if (!open || !current) return null;
+
+  const handle = telegramHandle(current.contactUrl, announcement.adsContact);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -85,23 +97,26 @@ export default function AnnouncementDialog({ announcement }: AnnouncementDialogP
             Announcement
           </h2>
 
+          {current.title ? (
+            <p className="pr-8 text-base font-semibold text-brand-500">{current.title}</p>
+          ) : null}
           <p className="pr-8 text-[15px] leading-relaxed whitespace-pre-wrap text-white">
-            {announcement.text}
+            {current.text}
           </p>
 
-          {(announcement.contactLabel || handle) && (
+          {(current.contactLabel || handle) && (
             <div className="mt-5 border-t border-ink-700 pt-4">
-              {announcement.contactLabel && (
-                <p className="text-sm text-ink-300">{announcement.contactLabel}</p>
+              {current.contactLabel && (
+                <p className="text-sm text-ink-300">{current.contactLabel}</p>
               )}
-              {announcement.contactUrl ? (
+              {current.contactUrl ? (
                 <a
-                  href={announcement.contactUrl}
+                  href={current.contactUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1 inline-block text-base font-semibold text-brand-500 hover:text-brand-400"
                 >
-                  {handle || announcement.contactUrl}
+                  {handle || current.contactUrl}
                 </a>
               ) : handle ? (
                 <p className="mt-1 text-base font-semibold text-brand-500">{handle}</p>
@@ -109,13 +124,27 @@ export default function AnnouncementDialog({ announcement }: AnnouncementDialogP
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={dismiss}
-            className="mt-6 w-full rounded-md bg-brand-500 px-4 py-2.5 text-sm font-bold text-black transition-colors hover:bg-brand-400"
-          >
-            OK
-          </button>
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <span className="text-xs text-ink-400">
+              {index + 1} / {dialogs.length}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={dismiss}
+                className="rounded-md border border-ink-700 px-4 py-2.5 text-sm font-medium text-ink-200 transition-colors hover:bg-ink-800"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={next}
+                className="rounded-md bg-brand-500 px-4 py-2.5 text-sm font-bold text-black transition-colors hover:bg-brand-400"
+              >
+                {index >= dialogs.length - 1 ? "Done" : "Next"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

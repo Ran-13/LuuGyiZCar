@@ -28,10 +28,21 @@ export interface AdBannerConfig {
   alt: string;
 }
 
+export interface AnnouncementDialogItem {
+  id: string;
+  enabled: boolean;
+  title: string;
+  text: string;
+  contactLabel: string;
+  contactUrl: string;
+}
+
 export interface AnnouncementConfig {
   enabled: boolean;
   /** Popup dialog on first home visit */
   showDialog: boolean;
+  /** Multiple popup messages shown in sequence. */
+  dialogs: AnnouncementDialogItem[];
   /** Inline banner under categories on home */
   showInline: boolean;
   /** Main Burmese / promo body */
@@ -64,6 +75,16 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
   announcement: {
     enabled: true,
     showDialog: true,
+    dialogs: [
+      {
+        id: "vip",
+        enabled: true,
+        title: "VIP Announcement",
+        text: "မြန်မာ solo / မြန်မာချောင်းရိုက် / ကလေးကား /\nမြန်မာlocal leak/Yoon May/စစ်ဗိုလ်မိန်းမ/tiktok cele\nHD တိုကို တစ်သက်စာ Vip ကြေး 8999ကျပ်ဖြင့်\nဝယ်ယူကြည့်ရှုနိုင်ပါပြီ",
+        contactLabel: "ဆက်သွယ်ရန် admin♠️",
+        contactUrl: "https://t.me/VVIPMEMEBR",
+      },
+    ],
     showInline: true,
     text: "မြန်မာ solo / မြန်မာချောင်းရိုက် / ကလေးကား /\nမြန်မာlocal leak/Yoon May/စစ်ဗိုလ်မိန်းမ/tiktok cele\nHD တိုကို တစ်သက်စာ Vip ကြေး 8999ကျပ်ဖြင့်\nဝယ်ယူကြည့်ရှုနိုင်ပါပြီ",
     contactLabel: "ဆက်သွယ်ရန် admin♠️",
