@@ -6,8 +6,10 @@ import {
   DEFAULT_ADS_CONFIG,
   NETWORK_SLOTS,
   EXOCLICK_VERIFICATION_META,
+  EXOCLICK_INS_CLASS,
   isNetworkSlotId,
   isSlotId,
+  isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
   type AdBannerConfig,
@@ -35,10 +37,12 @@ export type {
 export {
   AD_SLOTS,
   DEFAULT_ADS_CONFIG,
+  EXOCLICK_INS_CLASS,
   EXOCLICK_VERIFICATION_META,
   NETWORK_SLOTS,
   isNetworkSlotId,
   isSlotId,
+  isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
 };
@@ -78,12 +82,15 @@ function normalizeNetwork(raw: Partial<AdNetworkConfig> | undefined): AdNetworkC
   const popunder = typeof raw?.popunderZoneId === "string" ? raw.popunderZoneId.trim() : "";
   const verification =
     typeof raw?.verificationCode === "string" ? raw.verificationCode.trim() : "";
+  const insClass = typeof raw?.insClass === "string" ? raw.insClass.trim() : "";
 
   return {
     enabled: Boolean(raw?.enabled),
     zones,
     popunderZoneId: isValidZoneId(popunder) ? popunder : "",
     verificationCode: isValidVerificationCode(verification) ? verification : "",
+    // Empty is meaningful: the component falls back to the platform default.
+    insClass: isValidInsClass(insClass) ? insClass : "",
   };
 }
 

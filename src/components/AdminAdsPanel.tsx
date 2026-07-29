@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import {
   AD_SLOTS,
+  EXOCLICK_INS_CLASS,
   NETWORK_SLOTS,
+  isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
   type AdsConfig,
@@ -562,6 +564,26 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
             );
           })}
         </div>
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Ad tag class <span className="text-ink-400">(advanced — leave empty unless ads stay blank)</span>
+          <input
+            value={config.network.insClass}
+            onChange={(e) => updateNetwork({ insClass: e.target.value.trim() })}
+            placeholder={EXOCLICK_INS_CLASS}
+            className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
+              config.network.insClass && !isValidInsClass(config.network.insClass)
+                ? "border-red-500"
+                : "border-ink-700"
+            }`}
+          />
+          <span className="mt-1 block text-xs text-ink-400">
+            Defaults to <code className="text-ink-300">{EXOCLICK_INS_CLASS}</code>. If this site
+            uses a different ExoClick account and its zone tag shows another{" "}
+            <code className="text-ink-300">ins class=&quot;…&quot;</code>, paste that class here —
+            a mismatch shows no ads and reports no error.
+          </span>
+        </label>
 
         <label className="mt-4 block text-sm text-ink-300">
           Popunder Zone ID (stored only)

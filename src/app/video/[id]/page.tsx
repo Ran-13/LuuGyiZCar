@@ -9,6 +9,7 @@ import FavoriteButton from "@/components/FavoriteButton";
 import GridSkeleton from "@/components/GridSkeleton";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
+import ShareButton from "@/components/ShareButton";
 import WatchHistoryRecorder from "@/components/WatchHistoryRecorder";
 import { readAdsConfig } from "@/lib/ads";
 import {
@@ -154,7 +155,11 @@ export default async function VideoPage({ params }: PageProps) {
           )}
           <span>{video.length_min}</span>
           {added && <span>Added {added}</span>}
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-2">
+            <ShareButton
+              url={absoluteUrl(`/video/${video.id}`)}
+              title={video.title}
+            />
             <FavoriteButton video={video} variant="inline" />
           </span>
         </div>

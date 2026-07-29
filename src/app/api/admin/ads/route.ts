@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   AD_SLOTS,
   NETWORK_SLOTS,
+  isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
   type AdsConfig,
@@ -81,10 +82,15 @@ export async function PUT(request: Request) {
         ? body.network.verificationCode.trim()
         : "";
 
+    const insClass =
+      typeof body.network.insClass === "string" ? body.network.insClass.trim() : "";
+
     network.enabled = Boolean(body.network.enabled);
     network.zones = zones;
     network.popunderZoneId = isValidZoneId(popunder) ? popunder : "";
     network.verificationCode = isValidVerificationCode(verification) ? verification : "";
+    // Empty means "use the platform default", so it must survive validation.
+    network.insClass = insClass === "" || isValidInsClass(insClass) ? insClass : "";
   }
 
   const announcement = {

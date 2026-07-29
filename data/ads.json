@@ -46,11 +46,11 @@
   },
   "updatedAt": "2026-07-29T06:00:00.000Z",
   "network": {
-    "enabled": true,
+    "enabled": false,
     "zones": {
       "net-home-top": {
-        "enabled": true,
-        "zoneId": "5989710"
+        "enabled": false,
+        "zoneId": ""
       },
       "net-home-bottom": {
         "enabled": false,

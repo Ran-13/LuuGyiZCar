@@ -50,7 +50,8 @@ export default function ExoClickZone({ network, slot, className = "" }: Props) {
       aria-label="Advertisement"
       className={`flex justify-center overflow-hidden ${className}`}
     >
-      <ins className={EXOCLICK_INS_CLASS} data-zoneid={zoneId} />
+      {/* Per-site override, so each domain can run its own ExoClick account. */}
+      <ins className={network.insClass || EXOCLICK_INS_CLASS} data-zoneid={zoneId} />
     </aside>
   );
 }

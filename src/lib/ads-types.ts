@@ -64,19 +64,32 @@ export interface AdNetworkConfig {
    * before any zone exists to switch on.
    */
   verificationCode: string;
+  /**
+   * The `<ins>` class this site's ExoClick account issues.
+   *
+   * Empty falls back to EXOCLICK_INS_CLASS. Per-site so each domain can run its
+   * own ExoClick account without a class mismatch silently killing its ads.
+   */
+  insClass: string;
 }
 
 /** Meta tag name ExoClick looks for when verifying domain ownership. */
 export const EXOCLICK_VERIFICATION_META = "6a97888e-site-verification";
 
 /**
- * Class name ExoClick's ad-provider.js scans for when placing a zone.
+ * Default class name ExoClick's ad-provider.js scans for when placing a zone.
  *
- * Must match the tag issued in the ExoClick dashboard exactly. The `6a97888e`
- * segment is the same platform identifier used by EXOCLICK_VERIFICATION_META.
- * If an account ever issues a different class, change it here.
+ * Overridable per site (`AdNetworkConfig.insClass`) because the `6a97888e`
+ * segment also appears in EXOCLICK_VERIFICATION_META and may be account-derived.
+ * A mismatch fails silently — the script simply never fills the tag — so each
+ * site can pin the exact class its own dashboard issued.
  */
 export const EXOCLICK_INS_CLASS = "eas6a97888e2";
+
+/** Must be usable as a bare CSS class in a className attribute. */
+export function isValidInsClass(value: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9_-]{2,64}$/.test(value);
+}
 
 /** Verification codes are hex-ish tokens; reject anything that could break markup. */
 export function isValidVerificationCode(value: string): boolean {
@@ -202,6 +215,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     },
     popunderZoneId: "",
     verificationCode: "",
+    insClass: "",
   },
   updatedAt: new Date(0).toISOString(),
 };
