@@ -76,11 +76,10 @@ CACHE_BLOCK = """
 
         # Nginx proxy cache — server-side only, instant for repeat visitors
         proxy_cache luugyi_cache;
-        proxy_cache_valid 200 60s;
+        proxy_cache_valid 200 3s;
         proxy_cache_valid 301 302 10m;
         proxy_cache_valid 404 1m;
-        proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
-        proxy_cache_background_update on;
+        proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
         proxy_cache_lock on;
         proxy_cache_lock_timeout 5s;
         proxy_cache_key "$scheme$host$request_uri";

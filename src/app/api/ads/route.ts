@@ -6,7 +6,8 @@ export async function GET() {
   const config = await readAdsConfig();
   return NextResponse.json(config, {
     headers: {
-      "Cache-Control": "public, s-maxage=5, stale-while-revalidate=30",
+      "Cache-Control": "no-store, max-age=0",
+      Pragma: "no-cache",
     },
   });
 }

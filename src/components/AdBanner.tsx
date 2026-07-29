@@ -10,6 +10,8 @@ interface AdBannerProps {
   sticky?: boolean;
   /** Load eagerly (above-the-fold banners). Default true. */
   priority?: boolean;
+  /** Cache-bust banner URLs after admin updates. */
+  version?: string;
 }
 
 /** Renders a GIF/image ad when the slot is enabled and has an image. */
@@ -18,15 +20,19 @@ export default function AdBanner({
   className = "",
   sticky = false,
   priority = true,
+  version,
 }: AdBannerProps) {
   const [broken, setBroken] = useState(false);
 
   if (!banner?.enabled || !banner.imageUrl || broken) return null;
+  const imageUrl = version
+    ? `${banner.imageUrl}${banner.imageUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`
+    : banner.imageUrl;
 
   const image = (
     // eslint-disable-next-line @next/next/no-img-element -- GIF ads + arbitrary upload URLs
     <img
-      src={banner.imageUrl}
+      src={imageUrl}
       alt={banner.alt || "Advertisement"}
       className="w-full object-fill sm:max-h-28"
       loading={priority ? "eager" : "lazy"}

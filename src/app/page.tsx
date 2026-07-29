@@ -51,7 +51,7 @@ export default async function HomePage() {
 
       <HomeAnnouncement announcement={ads.announcement} />
 
-      <AdBanner banner={ads.banners["home-top"]} className="mb-6" />
+      <AdBanner banner={ads.banners["home-top"]} className="mb-6" version={ads.updatedAt} />
 
       <SectionHeading as="h1" title="Trending Now" subtitle="Most watched this week" />
 
@@ -73,7 +73,7 @@ export default async function HomePage() {
 
       {/* Spacer so fixed bottom banner doesn't overlap content */}
       {ads.banners["home-bottom"]?.enabled && <div className="h-20" />}
-      <AdBanner banner={ads.banners["home-bottom"]} sticky />
+      <AdBanner banner={ads.banners["home-bottom"]} sticky version={ads.updatedAt} />
     </>
   );
 }

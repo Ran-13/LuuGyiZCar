@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import { readAdsConfig } from "@/lib/ads";
+import { readAdsConfig, versionedAssetUrl } from "@/lib/ads";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Collect all enabled banner image URLs for preloading in <head>
   const bannerUrls = Object.values(ads.banners)
     .filter((b) => b.enabled && b.imageUrl)
-    .map((b) => b.imageUrl);
+    .map((b) => versionedAssetUrl(b.imageUrl, ads.updatedAt));
 
   return (
     <html lang="en" className="h-full antialiased">
