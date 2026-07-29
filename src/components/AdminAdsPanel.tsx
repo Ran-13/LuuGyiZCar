@@ -401,6 +401,9 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                 onChange={(e) => onUpload(slot.id, e.target.files?.[0])}
                 className="mt-1.5 block w-full text-sm text-ink-400 file:mr-3 file:rounded-md file:border-0 file:bg-ink-800 file:px-3 file:py-1.5 file:text-ink-100"
               />
+              <span className="mt-1 block text-xs text-ink-400">
+                Max 100MB. A successful upload will auto-fill the Image URL below.
+              </span>
               {uploading === slot.id && (
                 <span className="mt-1 block text-xs text-brand-500">Uploading…</span>
               )}

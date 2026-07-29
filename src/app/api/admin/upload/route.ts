@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { UPLOAD_DIR, UPLOAD_PUBLIC_PREFIX } from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024;
 const ALLOWED = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
 
 const EXT: Record<string, string> = {
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
   }
 
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
+    return NextResponse.json({ error: "File too large (max 100MB)" }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
