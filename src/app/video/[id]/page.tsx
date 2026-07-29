@@ -175,7 +175,7 @@ export default async function VideoPage({ params }: PageProps) {
           </section>
         )}
 
-        <AdBanner banner={ads.banners["video-mid"]} className="mt-5" version={ads.updatedAt} />
+        <AdBanner banner={ads.banners["video-mid"]} className="mt-5" />
       </div>
 
       <section className="mt-12">

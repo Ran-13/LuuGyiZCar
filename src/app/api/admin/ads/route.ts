@@ -94,9 +94,7 @@ export async function PUT(request: Request) {
   // visible to users on the very next request without waiting for TTL expiry.
   revalidatePath("/", "layout");
   revalidatePath("/");
-  revalidatePath("/category/[slug]", "page");
   revalidatePath("/search");
-  revalidatePath("/video/[id]", "page");
   revalidatePath("/favorites");
   revalidatePath("/history");
 

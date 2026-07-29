@@ -28,14 +28,6 @@ const DATA_FILE = path.join(DATA_DIR, "ads.json");
 export const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "ads");
 export const UPLOAD_PUBLIC_PREFIX = "/uploads/ads";
 
-export function versionedAssetUrl(url: string, version?: string): string {
-  if (!url) return url;
-  if (!version) return url;
-
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}v=${encodeURIComponent(version)}`;
-}
-
 function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConfig {
   return {
     enabled: Boolean(raw?.enabled),
