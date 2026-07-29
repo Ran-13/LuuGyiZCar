@@ -44,21 +44,36 @@ for env in "${envs[@]}"; do
 
   echo "==> Regenerating $FILE ($DOMAIN → 127.0.0.1:$PORT)"
 
+  # If Certbot has already modified the file, we need to preserve the SSL
+  # server block(s). Extract every server{} block that contains "listen 443"
+  # or "managed by Certbot", then append them after our new HTTP template.
+  SSL_BLOCKS=""
+  if [[ -f "$FILE" ]] && grep -q "managed by Certbot" "$FILE"; then
+    # Use awk to extract complete server{} blocks containing ssl/certbot
+    SSL_BLOCKS="$(awk '
+      /^server\s*\{/ { depth=1; block=$0"\n"; next }
+      depth > 0 {
+        block = block $0 "\n"
+        for (i=1; i<=length($0); i++) {
+          c = substr($0,i,1)
+          if (c == "{") depth++
+          if (c == "}") depth--
+        }
+        if (depth <= 0) {
+          if (block ~ /listen 443|managed by Certbot/) print block
+          block = ""
+        }
+      }
+    ' "$FILE")"
+  fi
+
   # Generate new http block from template
   sed "s|YOUR-DOMAIN.com|${DOMAIN}|g; s/8082/${PORT}/g; s|UPLOADS_ROOT|${UPLOADS_ROOT}|g" \
     "$TEMPLATE" > "${FILE}.new"
 
-  # If Certbot has already added an SSL server block, preserve it
-  if [[ -f "$FILE" ]] && grep -q "managed by Certbot" "$FILE"; then
-    # Extract the SSL server block (everything from the second "server {" onwards)
-    SSL_BLOCK="$(awk '/managed by Certbot/{found=1} found' "$FILE")"
-    if [[ -n "$SSL_BLOCK" ]]; then
-      # The certbot-managed lines include listen 443, ssl cert paths, etc.
-      # Keep the whole file as certbot wrote it but replace only our http server
-      # Simpler: just keep the certbot additions at the end
-      echo "" >> "${FILE}.new"
-      echo "$SSL_BLOCK" >> "${FILE}.new"
-    fi
+  # Append preserved SSL blocks
+  if [[ -n "$SSL_BLOCKS" ]]; then
+    printf "\n%s" "$SSL_BLOCKS" >> "${FILE}.new"
   fi
 
   mv "${FILE}.new" "$FILE"
