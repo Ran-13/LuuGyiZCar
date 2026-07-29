@@ -612,6 +612,10 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
           Mobile uses <code className="text-ink-300">eas6a97888e33</code> and banners use{" "}
           <code className="text-ink-300">eas6a97888e2</code> — they are not interchangeable.
           Interstitials fire when a visitor clicks a video from home / category / search.
+          The app re-arms the tag on every listing visit. If it still only shows{" "}
+          <strong className="text-ink-300">once per day</strong>, open the zone in ExoClick →{" "}
+          <strong className="text-ink-300">Capping / Frequency</strong> and lower it (e.g. every
+          click, or 1× per 5–15 minutes). Server-side capping cannot be overridden from this site.
         </p>
 
         <label className="mt-4 block text-sm text-ink-300">
