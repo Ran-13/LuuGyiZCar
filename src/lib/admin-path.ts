@@ -1,29 +1,33 @@
 /**
  * Secret admin URL slug (no leading slash).
- *
- * Set the same value for ADMIN_PATH (server rewrite) and NEXT_PUBLIC_ADMIN_PATH
- * (client fetch URLs + chrome hide). Default "admin" keeps local/dev simple;
- * production should use a long random slug.
+ * Case-sensitive — must match ADMIN_PATH in .env exactly (do not lowercase).
  */
 const RAW =
   process.env.NEXT_PUBLIC_ADMIN_PATH?.trim() ||
   process.env.ADMIN_PATH?.trim() ||
   "admin";
 
-/** Normalized slug: lowercase, URL-safe, no slashes. */
-export const ADMIN_PATH_SLUG = RAW.replace(/^\/+|\/+$/g, "")
-  .replace(/[^a-zA-Z0-9._-]/g, "-")
-  .replace(/-+/g, "-")
-  .toLowerCase() || "admin";
+export function normalizeAdminSlug(raw: string): string {
+  return (
+    raw
+      .replace(/^\/+|\/+$/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "-")
+      .replace(/-+/g, "-") || "admin"
+  );
+}
 
-/** Browser path for the admin UI, e.g. `/panel-k9x2m`. */
+export const ADMIN_PATH_SLUG = normalizeAdminSlug(RAW);
+
+/** Browser path for the admin UI, e.g. `/Mhn6H0ZxtsxTvE`. */
 export const ADMIN_UI_PATH = `/${ADMIN_PATH_SLUG}`;
 
-/** Browser path prefix for admin APIs, e.g. `/api/panel-k9x2m`. */
+/** Browser path prefix for admin APIs. */
 export const ADMIN_API_PREFIX = `/api/${ADMIN_PATH_SLUG}`;
 
 export function isAdminUiPath(pathname: string): boolean {
-  return pathname === ADMIN_UI_PATH || pathname.startsWith(`${ADMIN_UI_PATH}/`);
+  const p = pathname.toLowerCase();
+  const slug = ADMIN_PATH_SLUG.toLowerCase();
+  return p === `/${slug}` || p.startsWith(`/${slug}/`);
 }
 
 export function adminApiUrl(suffix: string): string {

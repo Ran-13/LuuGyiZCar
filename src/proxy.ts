@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { normalizeAdminSlug } from "@/lib/admin-path";
 
 function adminSlug(): string {
   const raw =
     process.env.ADMIN_PATH?.trim() ||
     process.env.NEXT_PUBLIC_ADMIN_PATH?.trim() ||
     "admin";
-  return (
-    raw
-      .replace(/^\/+|\/+$/g, "")
-      .replace(/[^a-zA-Z0-9._-]/g, "-")
-      .replace(/-+/g, "-")
-      .toLowerCase() || "admin"
-  );
+  return normalizeAdminSlug(raw);
 }
 
 function withAdminHeaders(response: NextResponse): NextResponse {
@@ -40,6 +35,15 @@ function withAdminHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+/** Case-insensitive prefix match (slug in .env may be mixed-case). */
+function stripSecretPrefix(pathname: string, prefix: string): string | null {
+  const p = pathname.toLowerCase();
+  const pre = prefix.toLowerCase();
+  if (p === pre) return "";
+  if (p.startsWith(`${pre}/`)) return pathname.slice(prefix.length);
+  return null;
+}
+
 /**
  * Hides `/admin` behind a secret slug from ADMIN_PATH.
  * Example: ADMIN_PATH=panel-k9x2m → public URL is /panel-k9x2m (rewrites to /admin).
@@ -48,26 +52,27 @@ export function proxy(request: NextRequest) {
   const slug = adminSlug();
   const { pathname } = request.nextUrl;
 
+  const secretUiRest = stripSecretPrefix(pathname, `/${slug}`);
+  const secretApiRest = stripSecretPrefix(pathname, `/api/${slug}`);
+
   const isDefaultUi = pathname === "/admin" || pathname.startsWith("/admin/");
   const isDefaultApi = pathname === "/api/admin" || pathname.startsWith("/api/admin/");
-  const isSecretUi = pathname === `/${slug}` || pathname.startsWith(`/${slug}/`);
-  const isSecretApi =
-    pathname === `/api/${slug}` || pathname.startsWith(`/api/${slug}/`);
+  const isSecretUi = secretUiRest !== null;
+  const isSecretApi = secretApiRest !== null;
 
-  // When a custom slug is set, the obvious /admin URLs return 404.
   if (slug !== "admin" && (isDefaultUi || isDefaultApi)) {
     return withAdminHeaders(new NextResponse(null, { status: 404 }));
   }
 
   if (isSecretUi && slug !== "admin") {
     const url = request.nextUrl.clone();
-    url.pathname = pathname.replace(`/${slug}`, "/admin");
+    url.pathname = secretUiRest ? `/admin${secretUiRest}` : "/admin";
     return withAdminHeaders(NextResponse.rewrite(url));
   }
 
   if (isSecretApi && slug !== "admin") {
     const url = request.nextUrl.clone();
-    url.pathname = pathname.replace(`/api/${slug}`, "/api/admin");
+    url.pathname = secretApiRest ? `/api/admin${secretApiRest}` : "/api/admin";
     return withAdminHeaders(NextResponse.rewrite(url));
   }
 
@@ -79,6 +84,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Broad enough to catch a custom ADMIN_PATH slug; logic above decides.
   matcher: ["/((?!_next/static|_next/image|uploads/|.*\\..*).*)"],
 };
