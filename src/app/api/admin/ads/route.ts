@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { AD_SLOTS, type AdsConfig, type AdSlotId, readAdsConfig, writeAdsConfig } from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
@@ -66,6 +67,14 @@ export async function PUT(request: Request) {
     banners,
     updatedAt: new Date().toISOString(),
   });
+
+  // Flush the layout + page cache so branding/announcement/banner changes are
+  // visible to users on the very next request without waiting for TTL expiry.
+  revalidatePath("/", "layout");
+  revalidatePath("/");
+  revalidatePath("/search");
+  revalidatePath("/favorites");
+  revalidatePath("/history");
 
   return NextResponse.json(saved, {
     headers: { "Cache-Control": "no-store" },
