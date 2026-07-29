@@ -22,6 +22,9 @@ fix_one() {
   mkdir -p "$dir/data" "$dir/uploads/ads"
   chown -R 1001:1001 "$dir/data" "$dir/uploads"
   chmod -R u+rwX "$dir/data" "$dir/uploads"
+  # Keep uploads readable by nginx (www-data / other)
+  chmod o+x /root 2>/dev/null || true
+  chmod -R o+rX "$dir/uploads"
   echo "Fixed permissions for $site"
 }
 

@@ -251,6 +251,7 @@ certbot --nginx -d luugyizcar.site -d www.luugyizcar.site
 | Wrong site content | Confirm ports: akogyivip=8082, luugyizcar=8083 |
 | Admin 404 at `/admin` | Use secret slug from `.env` (`ADMIN_PATH`) |
 | Can’t upload GIF | Volume writable; max 5MB; gif/jpg/png/webp |
+| nginx 403 on `/uploads/` | Run `./scripts/fix-public-perms.sh` — fixes `o+x /root` and `o+rX uploads/` for all sites |
 | Docker `npm ci` lock file error | Lockfile must match **npm 10** (Docker node:22). On Mac: `npx npm@10.9.8 install`, commit `package-lock.json` + `.npmrc`, push, then VPS `git pull` and rebuild |
 
 ```bash
@@ -275,4 +276,10 @@ cd ~/LuuGyiZCar
 # Upgrade after git push
 git pull
 ./scripts/upgrade-all.sh
+
+# Fix nginx 403 on /uploads/ (all sites)
+./scripts/fix-public-perms.sh
+
+# Fix one site + smoke-test a URL
+./scripts/fix-public-perms.sh akogyivip --check https://akogyivip.site/uploads/ads/banner.gif
 ```
