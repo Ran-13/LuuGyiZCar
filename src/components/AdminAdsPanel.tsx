@@ -4,9 +4,14 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import {
   AD_SLOTS,
+  NETWORK_SLOTS,
+  isValidVerificationCode,
+  isValidZoneId,
   type AdsConfig,
   type AdSlotId,
   type AnnouncementDialogItem,
+  type NetworkSlotId,
+  type NetworkZoneConfig,
 } from "@/lib/ads-types";
 import { adminApiUrl } from "@/lib/admin-path";
 
@@ -37,6 +42,20 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
       banners: {
         ...prev.banners,
         [slot]: { ...prev.banners[slot], ...patch },
+      },
+    }));
+  }
+
+  function updateNetwork(patch: Partial<AdsConfig["network"]>) {
+    setConfig((prev) => ({ ...prev, network: { ...prev.network, ...patch } }));
+  }
+
+  function updateZone(slot: NetworkSlotId, patch: Partial<NetworkZoneConfig>) {
+    setConfig((prev) => ({
+      ...prev,
+      network: {
+        ...prev.network,
+        zones: { ...prev.network.zones, [slot]: { ...prev.network.zones[slot], ...patch } },
       },
     }));
   }
@@ -454,6 +473,111 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
           </section>
         );
       })}
+
+      {/* ExoClick — a separate layer from the GIF banners above. Turning the
+          master switch off removes every zone and the provider script. */}
+      <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-ink-100">ExoClick ad network</h2>
+            <p className="text-xs text-ink-400">
+              Runs alongside your own banners. Paste the numeric Zone ID from your ExoClick
+              dashboard.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-ink-300">
+            <input
+              type="checkbox"
+              checked={config.network.enabled}
+              onChange={(e) => updateNetwork({ enabled: e.target.checked })}
+            />
+            Enabled
+          </label>
+        </div>
+
+        {!config.network.enabled && (
+          <p className="mt-3 rounded-md bg-ink-950 px-3 py-2 text-xs text-ink-400">
+            Network is off — no ExoClick script is loaded and no zones render.
+          </p>
+        )}
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Site verification code
+          <input
+            value={config.network.verificationCode}
+            onChange={(e) => updateNetwork({ verificationCode: e.target.value.trim() })}
+            placeholder="e.g. 9e5af7e18cb507949c6bf66b6b29ccb8"
+            className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
+              config.network.verificationCode &&
+              !isValidVerificationCode(config.network.verificationCode)
+                ? "border-red-500"
+                : "border-ink-700"
+            }`}
+          />
+          <span className="mt-1 block text-xs text-ink-400">
+            From ExoClick → Site Verification → HTML Meta Tag. Paste only the{" "}
+            <code className="text-ink-300">content</code> value, not the whole tag. Works even
+            while the network above is off — verify ownership first, then create zones.
+          </span>
+        </label>
+
+        <div className="mt-4 grid gap-3">
+          {NETWORK_SLOTS.map((slot) => {
+            const zone = config.network.zones[slot.id];
+            const invalid = zone.zoneId !== "" && !isValidZoneId(zone.zoneId);
+            return (
+              <div key={slot.id} className="rounded-md border border-ink-700 bg-ink-950 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-ink-100">{slot.label}</p>
+                    <p className="text-xs text-ink-400">{slot.description}</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-ink-300">
+                    <input
+                      type="checkbox"
+                      checked={zone.enabled}
+                      onChange={(e) => updateZone(slot.id, { enabled: e.target.checked })}
+                    />
+                    Show
+                  </label>
+                </div>
+                <label className="mt-2 block text-sm text-ink-300">
+                  Zone ID
+                  <input
+                    value={zone.zoneId}
+                    inputMode="numeric"
+                    onChange={(e) => updateZone(slot.id, { zoneId: e.target.value.trim() })}
+                    placeholder="e.g. 5241234"
+                    className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
+                      invalid ? "border-red-500" : "border-ink-700"
+                    }`}
+                  />
+                  {invalid && (
+                    <span className="mt-1 block text-xs text-red-400">
+                      Numbers only — this is discarded on save.
+                    </span>
+                  )}
+                </label>
+              </div>
+            );
+          })}
+        </div>
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Popunder Zone ID (stored only)
+          <input
+            value={config.network.popunderZoneId}
+            inputMode="numeric"
+            onChange={(e) => updateNetwork({ popunderZoneId: e.target.value.trim() })}
+            placeholder="Leave empty"
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+          <span className="mt-1 block text-xs text-ink-400">
+            Saved for later — no popunder is injected. It earns the most on your traffic but costs
+            the most in return visitors, so enabling it is a deliberate choice.
+          </span>
+        </label>
+      </section>
 
       <div className="flex flex-wrap items-center gap-3 pb-10">
         <button

@@ -4,24 +4,44 @@ import { cache } from "react";
 import {
   AD_SLOTS,
   DEFAULT_ADS_CONFIG,
+  NETWORK_SLOTS,
+  EXOCLICK_VERIFICATION_META,
+  isNetworkSlotId,
   isSlotId,
+  isValidVerificationCode,
+  isValidZoneId,
   type AdBannerConfig,
+  type AdNetworkConfig,
   type AdsConfig,
   type AdSlotId,
   type AnnouncementConfig,
   type AnnouncementDialogItem,
+  type NetworkSlotId,
+  type NetworkZoneConfig,
   type SiteConfig,
 } from "@/lib/ads-types";
 
 export type {
   AdBannerConfig,
+  AdNetworkConfig,
   AdsConfig,
   AdSlotId,
   AnnouncementConfig,
   AnnouncementDialogItem,
+  NetworkSlotId,
+  NetworkZoneConfig,
   SiteConfig,
 };
-export { AD_SLOTS, DEFAULT_ADS_CONFIG, isSlotId };
+export {
+  AD_SLOTS,
+  DEFAULT_ADS_CONFIG,
+  EXOCLICK_VERIFICATION_META,
+  NETWORK_SLOTS,
+  isNetworkSlotId,
+  isSlotId,
+  isValidVerificationCode,
+  isValidZoneId,
+};
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "ads.json");
@@ -35,6 +55,35 @@ function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConf
     imageUrl: typeof raw?.imageUrl === "string" ? raw.imageUrl.trim() : "",
     linkUrl: typeof raw?.linkUrl === "string" ? raw.linkUrl.trim() : "",
     alt: typeof raw?.alt === "string" && raw.alt.trim() ? raw.alt.trim() : "Advertisement",
+  };
+}
+
+function normalizeZone(raw: Partial<NetworkZoneConfig> | undefined): NetworkZoneConfig {
+  const zoneId = typeof raw?.zoneId === "string" ? raw.zoneId.trim() : "";
+  return {
+    enabled: Boolean(raw?.enabled),
+    // Rejected here as well as on save: the id lands in a DOM attribute, and a
+    // hand-edited ads.json is not a trusted source.
+    zoneId: isValidZoneId(zoneId) ? zoneId : "",
+  };
+}
+
+function normalizeNetwork(raw: Partial<AdNetworkConfig> | undefined): AdNetworkConfig {
+  const zonesIn: Partial<Record<NetworkSlotId, Partial<NetworkZoneConfig>>> = raw?.zones ?? {};
+  const zones = { ...DEFAULT_ADS_CONFIG.network.zones };
+  for (const slot of NETWORK_SLOTS) {
+    zones[slot.id] = normalizeZone(zonesIn[slot.id]);
+  }
+
+  const popunder = typeof raw?.popunderZoneId === "string" ? raw.popunderZoneId.trim() : "";
+  const verification =
+    typeof raw?.verificationCode === "string" ? raw.verificationCode.trim() : "";
+
+  return {
+    enabled: Boolean(raw?.enabled),
+    zones,
+    popunderZoneId: isValidZoneId(popunder) ? popunder : "",
+    verificationCode: isValidVerificationCode(verification) ? verification : "",
   };
 }
 
@@ -128,6 +177,7 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
           : DEFAULT_ADS_CONFIG.announcement.adsContactUrl,
     },
     banners,
+    network: normalizeNetwork(raw?.network),
     updatedAt:
       typeof raw?.updatedAt === "string" ? raw.updatedAt : DEFAULT_ADS_CONFIG.updatedAt,
   };

@@ -2,6 +2,7 @@ import Link from "next/link";
 import AdBanner from "@/components/AdBanner";
 import AnnouncementDialog from "@/components/AnnouncementDialog";
 import EmptyState from "@/components/EmptyState";
+import ExoClickZone from "@/components/ExoClickZone";
 import HomeAnnouncement from "@/components/HomeAnnouncement";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
@@ -53,6 +54,8 @@ export default async function HomePage() {
 
       <AdBanner banner={ads.banners["home-top"]} className="mb-6" />
 
+      <ExoClickZone network={ads.network} slot="net-home-top" className="mb-6" />
+
       <SectionHeading as="h1" title="Trending Now" subtitle="Most watched this week" />
 
       {trending.failed ? (
@@ -70,6 +73,8 @@ export default async function HomePage() {
           priorityCount={6}
         />
       )}
+
+      <ExoClickZone network={ads.network} slot="net-home-bottom" className="mt-8" />
 
       {/* Spacer so fixed bottom banner doesn't overlap content */}
       {ads.banners["home-bottom"]?.enabled && <div className="h-20" />}

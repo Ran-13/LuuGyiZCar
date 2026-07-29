@@ -19,6 +19,70 @@ export const AD_SLOTS = [
 
 export type AdSlotId = (typeof AD_SLOTS)[number]["id"];
 
+/**
+ * ExoClick placements — deliberately separate from AD_SLOTS.
+ *
+ * AD_SLOTS drives the self-hosted GIF banners sold directly. Network zones are a
+ * second, independent layer so enabling one can never disturb the other.
+ */
+export const NETWORK_SLOTS = [
+  {
+    id: "net-home-top",
+    label: "ExoClick — home top",
+    description: "Above Trending Now",
+  },
+  {
+    id: "net-home-bottom",
+    label: "ExoClick — home bottom",
+    description: "Below the video feed",
+  },
+  {
+    id: "net-video-below",
+    label: "ExoClick — video page",
+    description: "Below the player meta row",
+  },
+] as const;
+
+export type NetworkSlotId = (typeof NETWORK_SLOTS)[number]["id"];
+
+export interface NetworkZoneConfig {
+  enabled: boolean;
+  /** ExoClick zone id — digits only, enforced on read and on save. */
+  zoneId: string;
+}
+
+export interface AdNetworkConfig {
+  /** Master switch. Off means ad-provider.js is never even requested. */
+  enabled: boolean;
+  zones: Record<NetworkSlotId, NetworkZoneConfig>;
+  /** Stored for later; no popunder script is injected by this app. */
+  popunderZoneId: string;
+  /**
+   * ExoClick site-verification code — the `content` value of their meta tag.
+   *
+   * Rendered independently of `enabled`, because ownership must be verified
+   * before any zone exists to switch on.
+   */
+  verificationCode: string;
+}
+
+/** Meta tag name ExoClick looks for when verifying domain ownership. */
+export const EXOCLICK_VERIFICATION_META = "6a97888e-site-verification";
+
+/** Verification codes are hex-ish tokens; reject anything that could break markup. */
+export function isValidVerificationCode(value: string): boolean {
+  return /^[A-Za-z0-9_-]{8,128}$/.test(value);
+}
+
+export function isNetworkSlotId(value: string): value is NetworkSlotId {
+  return NETWORK_SLOTS.some((slot) => slot.id === value);
+}
+
+/** ExoClick zone ids are numeric; anything else is rejected rather than rendered. */
+export function isValidZoneId(value: string): boolean {
+  return /^\d{1,12}$/.test(value);
+}
+
 export interface AdBannerConfig {
   enabled: boolean;
   /** Public URL path, e.g. /uploads/ads/home-top.gif */
@@ -67,6 +131,8 @@ export interface AdsConfig {
   site: SiteConfig;
   announcement: AnnouncementConfig;
   banners: Record<AdSlotId, AdBannerConfig>;
+  /** ExoClick layer — independent of `banners`. */
+  network: AdNetworkConfig;
   updatedAt: string;
 }
 
@@ -115,6 +181,18 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       linkUrl: "",
       alt: "Advertisement",
     },
+  },
+  // Everything off by default: an existing deployment picks up this key on the
+  // next read and renders exactly as it did before.
+  network: {
+    enabled: false,
+    zones: {
+      "net-home-top": { enabled: false, zoneId: "" },
+      "net-home-bottom": { enabled: false, zoneId: "" },
+      "net-video-below": { enabled: false, zoneId: "" },
+    },
+    popunderZoneId: "",
+    verificationCode: "",
   },
   updatedAt: new Date(0).toISOString(),
 };

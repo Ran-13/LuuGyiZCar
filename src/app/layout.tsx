@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import ExoClickProvider from "@/components/ExoClickProvider";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import { readAdsConfig } from "@/lib/ads";
+import { EXOCLICK_VERIFICATION_META, readAdsConfig } from "@/lib/ads";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -10,10 +11,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const siteName = ads.site.siteName;
   const siteDescription = ads.site.siteDescription;
 
+  // Emitted whenever a code is set, regardless of network.enabled — ownership
+  // has to be verified before there are any zones to turn on.
+  const verification = ads.network.verificationCode
+    ? { [EXOCLICK_VERIFICATION_META]: ads.network.verificationCode }
+    : undefined;
+
   return {
     // Without metadataBase every OG/Twitter image URL stays relative, and social
     // scrapers silently drop them.
     metadataBase: new URL(SITE_URL),
+    ...(verification ? { other: verification } : {}),
     title: {
       default: `${siteName} — Free HD Videos`,
       template: `%s | ${siteName}`,
@@ -61,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </main>
         <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
+        <ExoClickProvider network={ads.network} />
       </body>
     </html>
   );

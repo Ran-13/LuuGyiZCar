@@ -2,6 +2,9 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   AD_SLOTS,
+  NETWORK_SLOTS,
+  isValidVerificationCode,
+  isValidZoneId,
   type AdsConfig,
   type AdSlotId,
   type AnnouncementDialogItem,
@@ -51,6 +54,39 @@ export async function PUT(request: Request) {
     }
   }
 
+  // ExoClick layer — validated independently of `banners` above so the two ad
+  // systems can never affect each other.
+  const network = { ...current.network };
+  if (body.network) {
+    const incomingZones = body.network.zones ?? {};
+    const zones = { ...current.network.zones };
+
+    for (const slot of NETWORK_SLOTS) {
+      const incoming = incomingZones[slot.id];
+      if (!incoming) continue;
+      const zoneId = typeof incoming.zoneId === "string" ? incoming.zoneId.trim() : "";
+      zones[slot.id] = {
+        enabled: Boolean(incoming.enabled),
+        // Zone ids reach a DOM attribute, so reject anything non-numeric here
+        // rather than trusting the client that posted it.
+        zoneId: isValidZoneId(zoneId) ? zoneId : "",
+      };
+    }
+
+    const popunder =
+      typeof body.network.popunderZoneId === "string" ? body.network.popunderZoneId.trim() : "";
+
+    const verification =
+      typeof body.network.verificationCode === "string"
+        ? body.network.verificationCode.trim()
+        : "";
+
+    network.enabled = Boolean(body.network.enabled);
+    network.zones = zones;
+    network.popunderZoneId = isValidZoneId(popunder) ? popunder : "";
+    network.verificationCode = isValidVerificationCode(verification) ? verification : "";
+  }
+
   const announcement = {
     ...current.announcement,
     ...(body.announcement ?? {}),
@@ -87,6 +123,7 @@ export async function PUT(request: Request) {
       adsContactUrl: String(announcement.adsContactUrl ?? ""),
     },
     banners,
+    network,
     updatedAt: new Date().toISOString(),
   });
 

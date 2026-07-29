@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AdBanner from "@/components/AdBanner";
+import ExoClickZone from "@/components/ExoClickZone";
 import FavoriteButton from "@/components/FavoriteButton";
 import GridSkeleton from "@/components/GridSkeleton";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
@@ -176,6 +177,8 @@ export default async function VideoPage({ params }: PageProps) {
         )}
 
         <AdBanner banner={ads.banners["video-mid"]} className="mt-5" />
+
+        <ExoClickZone network={ads.network} slot="net-video-below" className="mt-5" />
       </div>
 
       <section className="mt-12">
