@@ -216,7 +216,7 @@ certbot --nginx -d luugyizcar.site -d www.luugyizcar.site
 | Wrong site content | Confirm ports: akogyivip=8082, luugyizcar=8083 |
 | Admin 404 at `/admin` | Use secret slug from `.env` (`ADMIN_PATH`) |
 | Can’t upload GIF | Volume writable; max 5MB; gif/jpg/png/webp |
-| Locked out of admin | Wait 15 min after 5 failed logins, or clear lock by restarting that container |
+| Docker `npm ci` lock file error | On your Mac: `npm install`, commit `package-lock.json`, push, then on VPS `git pull` and rebuild |
 
 ```bash
 docker compose -p luugyi-akogyivip logs --tail=100
