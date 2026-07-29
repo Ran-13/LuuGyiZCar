@@ -26,7 +26,6 @@ export default function AdBanner({
       className="w-full object-fill sm:max-h-28"
       loading={priority ? "eager" : "lazy"}
       decoding={priority ? "sync" : "async"}
-      // @ts-expect-error -- fetchPriority not yet in React img types
       fetchPriority={priority ? "high" : "auto"}
     />
   );
