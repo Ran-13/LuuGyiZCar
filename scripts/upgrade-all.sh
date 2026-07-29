@@ -6,6 +6,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# shellcheck source=lib/nginx-cache.sh
+. "$ROOT/scripts/lib/nginx-cache.sh"
+
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "==> git pull once"
   git pull --ff-only || git pull
@@ -38,6 +41,11 @@ for env in "${envs[@]}"; do
     echo Upgraded \$NEXT_PUBLIC_SITE_URL
   "
 done
+
+# One shared cache zone across every site, so purge once after the whole loop
+# rather than per site.
+echo
+purge_nginx_cache
 
 echo
 echo "All sites upgraded."

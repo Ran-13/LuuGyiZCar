@@ -53,7 +53,9 @@ export default function VideoCard({ video, priority = false }: Props) {
 
   return (
     <article
-      className="group relative rounded-lg bg-ink-900 p-1.5 transition-all duration-200 hover:bg-ink-800 hover:shadow-lg hover:shadow-black/40"
+      // transition-[…] rather than transition-all: `all` makes the browser watch
+      // every animatable property on every card, including layout-affecting ones.
+      className="card-cv group relative rounded-lg bg-ink-900 p-1.5 transition-[background-color,box-shadow] duration-200 hover:bg-ink-800 hover:shadow-lg hover:shadow-black/40"
       onMouseEnter={startScrub}
       onMouseLeave={stopScrub}
       onFocus={startScrub}

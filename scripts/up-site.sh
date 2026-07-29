@@ -17,6 +17,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT/sites/$SITE/.env"
 EXAMPLE="$ROOT/sites/$SITE/.env.example"
 
+# shellcheck source=lib/nginx-cache.sh
+. "$ROOT/scripts/lib/nginx-cache.sh"
+
 if [[ ! -f "$ENV_FILE" ]]; then
   if [[ -f "$EXAMPLE" ]]; then
     cp "$EXAMPLE" "$ENV_FILE"
@@ -50,6 +53,11 @@ PROJECT="${COMPOSE_PROJECT_NAME:-luugyi-$SITE}"
 cd "$ROOT"
 echo "Starting project=$PROJECT env=$ENV_FILE port=${HOST_PORT:-3000}"
 docker compose --env-file "$ENV_FILE" -p "$PROJECT" up -d --build
+
+# --build may have produced a new build id; stale cached HTML would point at
+# chunk URLs this container no longer serves.
+echo
+purge_nginx_cache
 
 echo
 echo "Site URL:  ${NEXT_PUBLIC_SITE_URL}"

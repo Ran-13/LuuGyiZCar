@@ -29,6 +29,37 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Infinite scroll accumulates hundreds of cards, and every one is an interactive
+ * client component. content-visibility lets the browser skip layout, style and
+ * paint for cards outside the viewport, which is the single biggest scroll win
+ * on long feeds. contain-intrinsic-size supplies a placeholder height so the
+ * scrollbar stays stable and skipped cards do not cause jumping.
+ */
+.card-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
+/* Touch scrolling should not be blocked on hover/scrub handlers. */
+@media (hover: none) {
+  .card-cv {
+    contain-intrinsic-size: auto 240px;
+  }
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Horizontal category rails: scrollable, but without a visible scrollbar. */
 .no-scrollbar {
   scrollbar-width: none;

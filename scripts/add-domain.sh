@@ -31,6 +31,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIR="$ROOT/sites/$NAME"
 ENV_FILE="$DIR/.env"
 
+# shellcheck source=lib/nginx-cache.sh
+. "$ROOT/scripts/lib/nginx-cache.sh"
+
 if [[ -f "$ENV_FILE" ]]; then
   echo "Site already exists: $DIR"
   echo "To redeploy/upgrade it: ./scripts/upgrade-site.sh $NAME"
@@ -132,6 +135,10 @@ if [[ -d /etc/nginx/sites-available ]]; then
 else
   echo "Nginx not found — proxy ${DOMAIN} → 127.0.0.1:${PORT} yourself."
 fi
+
+# fresh-site.sh redeploys an existing domain through this script, so the shared
+# cache zone can still hold entries for this hostname from the previous build.
+purge_nginx_cache
 
 echo
 echo "=============================================="

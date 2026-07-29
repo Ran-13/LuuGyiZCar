@@ -19,19 +19,17 @@ function telegramHandle(url: string, fallback = ""): string {
 export default function AnnouncementDialog({ announcement }: AnnouncementDialogProps) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
-  const [index, setIndex] = useState(0);
   const dialogs = announcement.dialogs.filter((dialog) => dialog.enabled && dialog.text.trim());
+
+  // Derived, not set from an effect. `announcement` is server-rendered props, so
+  // server and client compute the same value — no hydration mismatch, no second
+  // render on every page load, and no visible flash of the dialog appearing
+  // after first paint.
+  const [open, setOpen] = useState(
+    () => announcement.enabled && announcement.showDialog && dialogs.length > 0,
+  );
+  const [index, setIndex] = useState(0);
   const current = dialogs[index];
-
-  useEffect(() => {
-    if (!announcement.enabled || !announcement.showDialog || dialogs.length === 0) {
-      return;
-    }
-
-    setIndex(0);
-    setOpen(true);
-  }, [announcement.enabled, announcement.showDialog, dialogs.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +46,6 @@ export default function AnnouncementDialog({ announcement }: AnnouncementDialogP
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dismiss is stable for this open cycle
   }, [open]);
 
   function dismiss() {

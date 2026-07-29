@@ -18,6 +18,9 @@ fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT/sites/$SITE/.env"
 
+# shellcheck source=lib/nginx-cache.sh
+. "$ROOT/scripts/lib/nginx-cache.sh"
+
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing $ENV_FILE — create the site first with ./scripts/add-domain.sh"
   exit 1
@@ -51,7 +54,7 @@ echo "==> Waiting for health..."
 PORT="${HOST_PORT:-3000}"
 for i in $(seq 1 30); do
   if curl -fsS -o /dev/null "http://127.0.0.1:${PORT}/"; then
-    echo "OK — https site should be updated."
+    echo "OK — container is serving."
     break
   fi
   if [[ "$i" -eq 30 ]]; then
@@ -61,6 +64,8 @@ for i in $(seq 1 30); do
   fi
   sleep 2
 done
+
+purge_nginx_cache
 
 echo
 echo "Upgraded: ${NEXT_PUBLIC_SITE_URL}"

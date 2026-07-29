@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { cache } from "react";
 import {
   AD_SLOTS,
   DEFAULT_ADS_CONFIG,
@@ -132,14 +133,21 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
   };
 }
 
-export async function readAdsConfig(): Promise<AdsConfig> {
+/**
+ * Reads the per-site ads/branding config.
+ *
+ * Wrapped in React `cache()` so the disk read + parse happens once per request
+ * instead of once per call site. The root layout alone calls this twice
+ * (generateMetadata and the layout body) before any page adds its own call.
+ */
+export const readAdsConfig = cache(async (): Promise<AdsConfig> => {
   try {
     const raw = await readFile(DATA_FILE, "utf8");
     return normalizeConfig(JSON.parse(raw) as Partial<AdsConfig>);
   } catch {
     return structuredClone(DEFAULT_ADS_CONFIG);
   }
-}
+});
 
 export async function writeAdsConfig(config: AdsConfig): Promise<AdsConfig> {
   await mkdir(DATA_DIR, { recursive: true });

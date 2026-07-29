@@ -27,6 +27,9 @@ DOMAIN="${DOMAIN%%:*}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# shellcheck source=lib/nginx-cache.sh
+. "$ROOT/scripts/lib/nginx-cache.sh"
+
 if [[ ! -f docker-compose.yml ]]; then
   echo "Run this from the LuuGyiZCar project root (docker-compose.yml missing)."
   exit 1
@@ -135,6 +138,9 @@ if [[ -d /etc/nginx/sites-available ]]; then
   else
     echo "Certbot not installed. After DNS works: apt install certbot python3-certbot-nginx && certbot --nginx -d $DOMAIN"
   fi
+  # No-ops on a first run (no cache dir yet); matters when this script is
+  # re-run on a box that already has a warm cache from a previous build.
+  purge_nginx_cache
 else
   echo "Nginx sites-available not found — skip nginx step. Proxy to 127.0.0.1:${HOST_PORT} yourself."
 fi

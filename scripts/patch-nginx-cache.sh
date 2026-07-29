@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Add proxy cache + gzip + static optimizations to existing nginx vhosts
-# WITHOUT touching Certbot SSL blocks. Safe to re-run (idempotent).
+# Sync existing nginx vhosts to the current cache/speed settings WITHOUT
+# touching Certbot SSL blocks. Safe to re-run (idempotent).
+#
+# This both ADDS missing directives and UPDATES ones that have changed, so live
+# Certbot-managed sites — which fix-nginx-speed.sh deliberately skips — still
+# pick up template changes.
 #
 # Usage:  ./scripts/patch-nginx-cache.sh
 set -euo pipefail
@@ -69,10 +73,12 @@ if "proxy_cache luugyi_cache" in text:
     sys.exit(0)
 
 CACHE_BLOCK = """
-        # Tell browsers NOT to cache HTML — always fetch fresh from server
+        # Browsers revalidate HTML on every view, so deploys are picked up at
+        # once. "no-cache" (store + revalidate) rather than "no-store", which
+        # would also disable the back/forward cache and make Back re-render.
         proxy_hide_header Cache-Control;
-        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
-        add_header Pragma "no-cache" always;
+        proxy_hide_header Pragma;
+        add_header Cache-Control "no-cache" always;
 
         # Nginx proxy cache — server-side only, instant for repeat visitors
         proxy_cache luugyi_cache;
@@ -98,6 +104,73 @@ else:
     print("  ! Could not find insertion point for proxy_cache")
 PY
   fi
+
+  # 3d. Migrate vhosts patched by an older version of this script.
+  # The add-if-missing guards above skip files that already have proxy_cache,
+  # so changed settings would never reach an already-patched site without this.
+  python3 - "$file" <<'PY'
+import pathlib, re, sys
+
+f = pathlib.Path(sys.argv[1])
+text = original = f.read_text()
+changes = []
+
+# no-store also disables the back/forward cache, making browser Back
+# re-download and re-render the page. no-cache keeps HTML always-revalidated
+# without that cost.
+new, n = re.subn(
+    r'add_header\s+Cache-Control\s+"no-cache,\s*no-store,\s*must-revalidate"\s+always;',
+    'add_header Cache-Control "no-cache" always;',
+    text,
+)
+if n:
+    text = new
+    changes.append("Cache-Control no-store -> no-cache")
+
+# Pragma is HTTP/1.0 and only adds a redundant header; hide the upstream one.
+new, n = re.subn(
+    r'[ \t]*add_header\s+Pragma\s+"no-cache"\s+always;\n',
+    "",
+    text,
+)
+if n:
+    text = new
+    changes.append("dropped Pragma header")
+
+if "proxy_hide_header Pragma;" not in text and "proxy_hide_header Cache-Control;" in text:
+    text = text.replace(
+        "proxy_hide_header Cache-Control;",
+        "proxy_hide_header Cache-Control;\n        proxy_hide_header Pragma;",
+        1,
+    )
+    changes.append("hide upstream Pragma")
+
+# Image optimization is CPU-bound; without a server-side cache every cold
+# browser re-runs the resize/encode in Node.
+img = re.search(r"location /_next/image[^{]*\{(?:[^{}]|\{[^{}]*\})*?\}", text)
+if img and "proxy_cache luugyi_cache" not in img.group(0):
+    block = img.group(0)
+    patched = block.replace(
+        "proxy_pass",
+        (
+            "proxy_cache luugyi_cache;\n"
+            '        proxy_cache_key "$scheme$host$uri$is_args$args";\n'
+            "        proxy_cache_valid 200 30d;\n"
+            "        proxy_cache_use_stale error timeout updating;\n"
+            "        proxy_cache_background_update on;\n"
+            "        proxy_cache_lock on;\n"
+            "        proxy_pass"
+        ),
+        1,
+    )
+    text = text.replace(block, patched, 1)
+    changes.append("proxy_cache for /_next/image")
+
+if text != original:
+    f.write_text(text)
+    for c in changes:
+        print(f"  ~ {c}")
+PY
 
   echo "  Done: $name"
 done
