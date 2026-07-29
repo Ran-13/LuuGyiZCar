@@ -1,0 +1,34 @@
+{
+  "announcement": {
+    "enabled": true,
+    "showDialog": true,
+    "showInline": true,
+    "text": "မြန်မာ solo / မြန်မာချောင်းရိုက် / ကလေးကား /\nမြန်မာlocal leak/Yoon May/စစ်ဗိုလ်မိန်းမ/tiktok cele\nHD တိုကို တစ်သက်စာ Vip ကြေး 8999ကျပ်ဖြင့်\nဝယ်ယူကြည့်ရှုနိုင်ပါပြီ",
+    "contactLabel": "ဆက်သွယ်ရန် admin♠️",
+    "contactUrl": "https://t.me/VVIPMEMEBR",
+    "adsLabel": "ကြော်ငြာထည့်သွင်းလိုပါက admin 👉",
+    "adsContact": "@VVIPMEMEBR",
+    "adsContactUrl": "https://t.me/VVIPMEMEBR"
+  },
+  "banners": {
+    "home-top": {
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "alt": "Advertisement"
+    },
+    "home-bottom": {
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "alt": "Advertisement"
+    },
+    "video-mid": {
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "alt": "Advertisement"
+    }
+  },
+  "updatedAt": "2026-07-29T06:00:00.000Z"
+}
