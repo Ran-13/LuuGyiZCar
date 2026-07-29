@@ -1,16 +1,26 @@
 import type { Metadata, Viewport } from "next";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Without metadataBase every OG/Twitter image URL stays relative, and social
+  // scrapers silently drop them.
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "LuuGyi Zcar — Free HD Videos",
-    template: "%s | LuuGyi Zcar",
+    default: `${SITE_NAME} — Free HD Videos`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Browse and search HD videos across Korea, Japan, Asian, amateur and more categories.",
-  robots: { index: false, follow: false },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_US",
+    title: `${SITE_NAME} — Free HD Videos`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

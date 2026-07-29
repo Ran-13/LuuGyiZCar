@@ -16,7 +16,12 @@ interface PageProps {
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { q } = await searchParams;
-  return { title: q ? `"${q}" — Search` : "Search" };
+  return {
+    title: q ? `"${q}" — Search` : "Search",
+    // Search result pages are thin, near-duplicate content; indexing them
+    // competes with the category pages that should actually rank.
+    robots: { index: false, follow: true },
+  };
 }
 
 export default async function SearchPage({ searchParams }: PageProps) {

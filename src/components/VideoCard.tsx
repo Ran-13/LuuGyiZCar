@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
-import type { EpornerVideo } from "@/lib/eporner";
+import type { VideoSummary } from "@/lib/eporner";
 import { formatAdded, formatRating, formatViews } from "@/lib/eporner";
+import FavoriteButton from "./FavoriteButton";
 
 interface Props {
-  video: EpornerVideo;
+  video: VideoSummary;
   /** Only the first visible row should load eagerly — everything below stays lazy. */
   priority?: boolean;
 }
@@ -44,12 +45,17 @@ export default function VideoCard({ video, priority = false }: Props) {
 
   return (
     <article
-      className="group"
+      className="group relative"
       onMouseEnter={startScrub}
       onMouseLeave={stopScrub}
       onFocus={startScrub}
       onBlur={stopScrub}
     >
+      {/* Sibling of the link, not a child: a <button> inside an <a> is invalid
+          HTML and breaks keyboard navigation. Positioned against the article,
+          whose top-right corner is the thumbnail's top-right corner. */}
+      <FavoriteButton video={video} />
+
       <Link href={`/video/${video.id}`} className="block">
         <div className="relative aspect-video overflow-hidden rounded-md bg-ink-800 ring-brand-500/0 transition-all duration-200 group-hover:ring-2 group-hover:ring-brand-500/70">
           {src ? (

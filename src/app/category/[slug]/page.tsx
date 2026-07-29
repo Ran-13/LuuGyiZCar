@@ -26,7 +26,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const category = getCategory(slug);
   if (!category) return { title: "Not found" };
 
-  return { title: `${category.label} Videos`, description: category.description };
+  const path = `/category/${category.slug}`;
+  return {
+    title: `${category.label} Videos`,
+    description: category.description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: `${category.label} Videos`,
+      description: category.description,
+      url: path,
+    },
+  };
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps) {

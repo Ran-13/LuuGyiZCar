@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { EpornerVideo, SortOrder } from "@/lib/eporner";
+import { mergeUniqueById, type EpornerVideo, type SortOrder } from "@/lib/eporner";
 import VideoCard from "./VideoCard";
 
 interface Props {
@@ -57,18 +57,7 @@ export default function InfiniteVideoGrid({
 
       const data = (await res.json()) as { videos: EpornerVideo[] };
 
-      // Pages can overlap as the upstream ordering shifts, so append by id.
-      setVideos((prev) => {
-        const seen = new Set(prev.map((v) => v.id));
-        if (excludeId) seen.add(excludeId);
-        const merged = [...prev];
-        for (const video of data.videos) {
-          if (seen.has(video.id)) continue;
-          seen.add(video.id);
-          merged.push(video);
-        }
-        return merged;
-      });
+      setVideos((prev) => mergeUniqueById(prev, data.videos, excludeId));
       setPage(next);
     } catch {
       setError(true);

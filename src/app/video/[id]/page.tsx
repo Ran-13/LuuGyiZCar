@@ -1,8 +1,13 @@
+import { Star } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import FavoriteButton from "@/components/FavoriteButton";
+import GridSkeleton from "@/components/GridSkeleton";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
+import WatchHistoryRecorder from "@/components/WatchHistoryRecorder";
 import {
   formatAdded,
   formatRating,
@@ -10,7 +15,10 @@ import {
   getVideoById,
   parseKeywords,
   searchVideos,
+  toIsoDate,
+  toIsoDuration,
 } from "@/lib/eporner";
+import { absoluteUrl } from "@/lib/site";
 
 export const revalidate = 900;
 
@@ -26,13 +34,47 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const video = await getVideoById(id);
   if (!video) return { title: "Video not found" };
 
+  const path = `/video/${video.id}`;
+  const thumb = video.default_thumb?.src;
+
   return {
     title: video.title,
+    description: `Watch ${video.title} — ${video.length_min} of HD video.`,
+    alternates: { canonical: path },
     openGraph: {
+      type: "video.other",
       title: video.title,
-      images: video.default_thumb?.src ? [video.default_thumb.src] : [],
+      url: path,
+      images: thumb ? [thumb] : [],
     },
   };
+}
+
+/**
+ * The related query depends on tags parsed from the video, so this fetch is
+ * genuinely sequential after `getVideoById`. Isolating it behind Suspense lets
+ * the player paint after the first call instead of waiting for both.
+ */
+async function RelatedSection({ query, currentId }: { query: string; currentId: string }) {
+  const related = await searchVideos({
+    query,
+    perPage: RELATED_BATCH,
+    order: "top-weekly",
+  });
+  const videos = related.videos.filter((v) => v.id !== currentId);
+
+  if (videos.length === 0) return null;
+
+  return (
+    <InfiniteVideoGrid
+      initialVideos={videos}
+      totalPages={related.totalPages}
+      query={query}
+      order="top-weekly"
+      batchSize={RELATED_BATCH}
+      excludeId={currentId}
+    />
+  );
 }
 
 export default async function VideoPage({ params }: PageProps) {
@@ -44,18 +86,42 @@ export default async function VideoPage({ params }: PageProps) {
 
   // Related videos key off the first usable tag; falls back to the busiest generic term.
   const relatedQuery = tags[0] ?? "asian";
-  const related = await searchVideos({
-    query: relatedQuery,
-    perPage: RELATED_BATCH,
-    order: "top-weekly",
-  });
-  const relatedVideos = related.videos.filter((v) => v.id !== video.id);
 
   const rating = formatRating(video.rate);
   const added = formatAdded(video.added);
 
+  // schema.org VideoObject — what produces thumbnail + duration rich results.
+  // Optional fields are omitted rather than emitted empty, which validators flag.
+  const uploadDate = toIsoDate(video.added);
+  const duration = toIsoDuration(video.length_sec);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: video.title,
+    description: `Watch ${video.title} — ${video.length_min} of HD video.`,
+    url: absoluteUrl(`/video/${video.id}`),
+    embedUrl: video.embed,
+    ...(video.default_thumb?.src ? { thumbnailUrl: [video.default_thumb.src] } : {}),
+    ...(uploadDate ? { uploadDate } : {}),
+    ...(duration ? { duration } : {}),
+    interactionStatistic: {
+      "@type": "InteractionCounter",
+      interactionType: { "@type": "WatchAction" },
+      userInteractionCount: video.views,
+    },
+    isFamilyFriendly: false,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // Values come from the upstream API, so they are serialized, never interpolated raw.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      <WatchHistoryRecorder video={video} />
+
       <div>
         {/* Full width, but never taller than the viewport — at very wide sizes the
             16:9 box would otherwise push the title and tags off screen. */}
@@ -79,22 +145,15 @@ export default async function VideoPage({ params }: PageProps) {
           <span>{formatViews(video.views)} views</span>
           {rating > 0 && (
             <span className="flex items-center gap-1 text-brand-500">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="m12 2 3 6.6 7 .9-5 4.9 1.2 7L12 18l-6.2 3.4L7 14.4l-5-4.9 7-.9z" />
-              </svg>
+              <Star size={14} fill="currentColor" aria-hidden />
               {rating.toFixed(1)}
             </span>
           )}
           <span>{video.length_min}</span>
           {added && <span>Added {added}</span>}
-          <a
-            href={video.url}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="ml-auto text-ink-400 underline-offset-2 transition-colors hover:text-brand-500 hover:underline"
-          >
-            Source ↗
-          </a>
+          <span className="ml-auto">
+            <FavoriteButton video={video} variant="inline" />
+          </span>
         </div>
 
         {tags.length > 0 && (
@@ -115,19 +174,13 @@ export default async function VideoPage({ params }: PageProps) {
         )}
       </div>
 
-      {relatedVideos.length > 0 && (
-        <section className="mt-12">
-          <SectionHeading title="Related Videos" subtitle={`More in “${relatedQuery}”`} />
-          <InfiniteVideoGrid
-            initialVideos={relatedVideos}
-            totalPages={related.totalPages}
-            query={relatedQuery}
-            order="top-weekly"
-            batchSize={RELATED_BATCH}
-            excludeId={video.id}
-          />
-        </section>
-      )}
+      <section className="mt-12">
+        {/* Heading renders immediately; only the grid waits on the second fetch. */}
+        <SectionHeading title="Related Videos" subtitle={`More in “${relatedQuery}”`} />
+        <Suspense fallback={<GridSkeleton count={RELATED_BATCH} />}>
+          <RelatedSection query={relatedQuery} currentId={video.id} />
+        </Suspense>
+      </section>
     </>
   );
 }

@@ -18,13 +18,12 @@ export default function Footer() {
         </nav>
 
         <p className="mt-6 max-w-3xl text-xs leading-relaxed text-ink-400">
-          All video metadata and thumbnails are provided by the public Eporner API. This site hosts
-          no media files — playback is served from the original provider. Content is restricted to
-          adults 18 or older.
+          LuuGyi Zcar is an adult video streaming index. All content is restricted to adults 18
+          years or older.
         </p>
 
         <p className="mt-4 text-xs text-ink-400">
-          © {new Date().getFullYear()} LuuGyi Zcar — built on the Eporner API v2.
+          © {new Date().getFullYear()} LuuGyi Zcar. All rights reserved.
         </p>
       </div>
     </footer>

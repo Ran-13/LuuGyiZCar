@@ -45,7 +45,13 @@ body {
   overflow: hidden;
 }
 
-*:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
+/* Inside @layer base so component utilities can override it. Unlayered rules
+   beat every cascade layer regardless of specificity, which previously made
+   `focus-visible:outline-none` impossible to apply — the search field ended up
+   with both this ring and its own focus-within border. */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
 }

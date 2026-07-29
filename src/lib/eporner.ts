@@ -93,7 +93,7 @@ export interface SearchParams {
  * Bails out unchanged on anything that isn't a clean round-trip, so ASCII titles
  * and legitimately accented Latin text ("Café") are never touched.
  */
-function decodeMojibake(str: string): string {
+export function decodeMojibake(str: string): string {
   for (const ch of str) {
     if (ch.codePointAt(0)! > 0xff) return str;
   }
@@ -204,6 +204,34 @@ export async function getVideoById(
   }
 }
 
+/**
+ * A video with the bulky fields optional.
+ *
+ * Favourites and watch history persist videos to localStorage, and the upstream
+ * `id` endpoint accepts only one id per request — so rehydrating a saved list by
+ * id would mean one upstream call per entry. Storing a trimmed snapshot instead
+ * keeps those pages to zero network calls; the cost is no hover-scrub on saved
+ * cards, since `thumbs` is dropped.
+ */
+export type VideoSummary = Omit<EpornerVideo, "keywords" | "thumbs"> &
+  Partial<Pick<EpornerVideo, "keywords" | "thumbs">>;
+
+/** Strips `thumbs`/`keywords` so persisted entries stay small. */
+export function toVideoSummary(video: VideoSummary): VideoSummary {
+  return {
+    id: video.id,
+    title: video.title,
+    views: video.views,
+    rate: video.rate,
+    url: video.url,
+    added: video.added,
+    length_sec: video.length_sec,
+    length_min: video.length_min,
+    embed: video.embed,
+    default_thumb: video.default_thumb,
+  };
+}
+
 /** Splits the comma-separated `keywords` blob into usable tags, dropping title-length noise. */
 export function parseKeywords(keywords: string, limit = 12): string[] {
   const seen = new Set<string>();
@@ -232,10 +260,15 @@ export function formatRating(rate: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function formatAdded(added: string): string {
-  // Upstream format: "2026-07-23 13:12:12" (not ISO — needs a T for Safari).
+/** Upstream sends "2026-07-23 13:12:12" — not ISO, so it needs a T and a zone for Safari. */
+function parseAdded(added: string): Date | null {
   const date = new Date(added.replace(" ", "T") + "Z");
-  if (Number.isNaN(date.getTime())) return "";
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function formatAdded(added: string): string {
+  const date = parseAdded(added);
+  if (!date) return "";
 
   const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
   if (days < 1) return "today";
@@ -243,4 +276,45 @@ export function formatAdded(added: string): string {
   if (days < 30) return `${days} days ago`;
   if (days < 365) return `${Math.floor(days / 30)} months ago`;
   return `${Math.floor(days / 365)} years ago`;
+}
+
+/** ISO-8601 timestamp for schema.org `uploadDate`; empty string if unparseable. */
+export function toIsoDate(added: string): string {
+  return parseAdded(added)?.toISOString() ?? "";
+}
+
+/** Seconds → ISO-8601 duration for schema.org, e.g. 658 → "PT10M58S". */
+export function toIsoDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+
+  const total = Math.floor(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+
+  return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${secs ? `${secs}S` : ""}`;
+}
+
+/**
+ * Appends `incoming` onto `existing`, skipping ids already present.
+ *
+ * Upstream pages can overlap as the ordering shifts, so infinite scroll must
+ * merge by id rather than blindly concatenating.
+ */
+export function mergeUniqueById(
+  existing: EpornerVideo[],
+  incoming: EpornerVideo[],
+  excludeId?: string,
+): EpornerVideo[] {
+  const seen = new Set(existing.map((v) => v.id));
+  if (excludeId) seen.add(excludeId);
+
+  const merged = [...existing];
+  for (const video of incoming) {
+    if (seen.has(video.id)) continue;
+    seen.add(video.id);
+    merged.push(video);
+  }
+
+  return merged;
 }

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Emits .next/standalone with only the traced runtime deps, so the Docker
+  // image does not need node_modules.
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.eporner.com" },

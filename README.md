@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LuuGyi Zcar
 
-## Getting Started
+Video browsing site built on Next.js 16 (App Router) and Tailwind v4, backed by the
+public Eporner API v2.
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SITE_URL` before building for
+production — canonical URLs, the sitemap, and Open Graph images are all derived from it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command         | Purpose                       |
+| --------------- | ----------------------------- |
+| `npm run dev`   | Dev server                    |
+| `npm run build` | Production build (standalone) |
+| `npm start`     | Serve a production build      |
+| `npm test`      | Unit tests (Vitest)           |
+| `npm run lint`  | ESLint                        |
 
-## Learn More
+## Architecture notes
 
-To learn more about Next.js, take a look at the following resources:
+- **All upstream calls are server-side.** The Eporner API sends no CORS headers, so the
+  browser cannot call it directly. Infinite scroll pages through `/api/videos`, an
+  internal proxy.
+- **`/api/videos` is guarded**, since an open proxy is free upstream quota for anyone who
+  finds it — and the upstream throttles by IP. It requires `Sec-Fetch-Site: same-origin`
+  and rate-limits per client (60 req/min). The limiter is in-process; running multiple
+  replicas multiplies the effective limit, which is the point to move it to Redis
+  (`src/lib/rate-limit.ts`).
+- **Titles are mojibake-corrected.** The API returns UTF-8 bytes re-encoded as Latin-1
+  codepoints, so non-Latin titles arrive garbled. `decodeMojibake` in `src/lib/eporner.ts`
+  reverses this and bails out on anything that is not a clean round-trip.
+- **`total_count` is inconsistent** (string on some queries, number on others) and the API
+  stops serving past 100,000 results, so pagination is recomputed and clamped rather than
+  trusted.
+- **Favorites and history are localStorage-only.** Entries store a trimmed video snapshot
+  rather than an id, because the upstream `id` endpoint accepts one id per request —
+  rehydrating a saved list by id would mean one upstream call per entry.
+- **Storage keys live in `src/lib/storage-keys.ts`**, deliberately outside the
+  `"use client"` module. A server component importing a value from a client module gets a
+  client reference, not the value, which silently becomes `undefined` when passed as a prop.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Build the container:
 
-## Deploy on Vercel
+```bash
+docker build --build-arg NEXT_PUBLIC_SITE_URL=https://your-domain.com -t luugyi-zcar .
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Run it:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+docker run -p 3000:3000 -e TRUST_PROXY_HEADERS=true luugyi-zcar
+```
+
+Set `TRUST_PROXY_HEADERS=true` only when running behind a reverse proxy that overwrites
+`X-Forwarded-For`. When it is unset, the rate limiter ignores the header, because a client
+can otherwise forge a fresh IP per request and bypass the limit entirely.
+
+`next/image` optimizes remote CDN thumbnails, which is CPU-bound on a small VPS. If load
+becomes a problem, reduce `imageSizes` / `deviceSizes` in `next.config.ts`.
