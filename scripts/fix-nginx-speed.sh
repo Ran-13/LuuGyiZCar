@@ -64,6 +64,10 @@ for env in "${envs[@]}"; do
   echo "  Done: $name"
 done
 
+# Ensure cache directory exists
+mkdir -p /var/cache/nginx/luugyi
+chown www-data:www-data /var/cache/nginx/luugyi 2>/dev/null || true
+
 echo
 echo "==> Testing nginx config"
 nginx -t
