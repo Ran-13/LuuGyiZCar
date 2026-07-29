@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRef, useState } from "react";
 import type { VideoSummary } from "@/lib/eporner";
 import { formatAdded, formatViews } from "@/lib/eporner";
@@ -66,7 +65,12 @@ export default function VideoCard({ video, priority = false }: Props) {
           whose top-right corner is the thumbnail's top-right corner. */}
       <FavoriteButton video={video} />
 
-      <Link href={`/video/${video.id}`} className="exo-int-trigger block">
+      {/*
+        Plain <a>, not next/link: ExoClick Fullpage Interstitial ("Clicking on
+        Links") intercepts a real navigation. Next.js soft-routing skips that
+        and the interstitial never shows between grid → video page.
+      */}
+      <a href={`/video/${video.id}`} className="exo-int-trigger block">
         <div className="relative aspect-video overflow-hidden rounded-md bg-ink-800 transition-transform duration-200 group-hover:scale-[1.02]">
           {src ? (
             <Image
@@ -116,7 +120,7 @@ export default function VideoCard({ video, priority = false }: Props) {
         <h3 className="mt-2 line-clamp-2 min-h-9 px-0.5 text-[13px] leading-snug font-medium text-ink-100 transition-colors group-hover:text-white">
           {video.title}
         </h3>
-      </Link>
+      </a>
 
       {/* Meta row — views + date, no rating bar */}
       <div className="mt-1 flex items-center gap-x-1.5 overflow-hidden px-0.5 text-[11px] whitespace-nowrap text-ink-400">

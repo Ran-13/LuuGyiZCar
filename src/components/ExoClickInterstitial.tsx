@@ -15,22 +15,20 @@ declare global {
 }
 
 function queueAdServe(): void {
-  const provider = window.AdProvider ?? [];
-  window.AdProvider = provider;
-  provider.push({ serve: {} });
+  if (typeof window === "undefined") return;
+  window.AdProvider = window.AdProvider || [];
+  window.AdProvider.push({ serve: {} });
 }
 
 /**
  * ExoClick fullpage interstitial tags.
  *
- * ExoClick's current dashboard issues the SAME tag format as banners
- * (ad-provider.js + <ins class="…" data-zoneid="…">) — including for
- * "Desktop/Mobile Fullpage Interstitial" zones. Each zone often has its
- * own `ins` class (e.g. eas6a97888e35 vs eas6a97888e33), so we resolve
- * class per zone.
+ * Dashboard tags use ad-provider.js + <ins class data-zoneid> (same as banners).
+ * Each zone often has its own ins class — resolved per zone.
  *
- * Belongs on LISTING pages (home, category, search). Trigger is configured
- * in the ExoClick zone (usually "Clicking on Links").
+ * Must live on LISTING pages. Video cards use a real <a href> (hard navigation)
+ * so ExoClick's "Clicking on Links" trigger can intercept before the browser
+ * leaves the page. Next.js <Link> soft-nav skips that and the ad never shows.
  */
 export default function ExoClickInterstitial({ network }: { network: AdNetworkConfig }) {
   const active = INTERSTITIAL_SLOTS.filter((slot) => {
@@ -50,7 +48,12 @@ export default function ExoClickInterstitial({ network }: { network: AdNetworkCo
     if (!key) return;
     if (servedKey.current === key) return;
     servedKey.current = key;
+
+    // Serve now (AdProvider queues if the script is still loading) and once more
+    // shortly after, in case lazy script arrival raced the first push.
     queueAdServe();
+    const t = window.setTimeout(queueAdServe, 800);
+    return () => window.clearTimeout(t);
   }, [key]);
 
   if (active.length === 0) return null;
