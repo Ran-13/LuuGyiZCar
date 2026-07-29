@@ -18,10 +18,15 @@ if [[ ${#envs[@]} -eq 0 ]]; then
   exit 1
 fi
 
+# Ensure nginx can traverse /root (once for all sites)
+chmod o+x /root 2>/dev/null || true
+
 for env in "${envs[@]}"; do
   name="$(basename "$(dirname "$env")")"
   echo
   echo "######## Upgrading $name ########"
+  # Ensure nginx can read uploaded files
+  chmod -R o+rX "$ROOT/sites/$name/uploads" 2>/dev/null || true
   # Skip git pull inside upgrade-site (already pulled)
   ROOT="$ROOT" bash -c "
     set -euo pipefail

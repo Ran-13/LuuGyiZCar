@@ -41,6 +41,10 @@ set +a
 PROJECT="${COMPOSE_PROJECT_NAME:-luugyi-$SITE}"
 
 echo "==> Rebuilding $SITE (project=$PROJECT)"
+# Ensure nginx can read uploaded files after rebuild
+chmod o+x /root 2>/dev/null || true
+chmod -R o+rX "$ROOT/sites/$SITE/uploads" 2>/dev/null || true
+
 docker compose --env-file "$ENV_FILE" -p "$PROJECT" up -d --build
 
 echo "==> Waiting for health..."

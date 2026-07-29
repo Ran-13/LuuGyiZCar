@@ -35,6 +35,9 @@ fi
 if command -v chown >/dev/null 2>&1; then
   chown -R 1001:1001 "$ROOT/sites/$SITE/data" "$ROOT/sites/$SITE/uploads" 2>/dev/null || true
 fi
+# Allow nginx to read uploaded files directly
+chmod o+x /root 2>/dev/null || true
+chmod -R o+rX "$ROOT/sites/$SITE/uploads"
 
 # shellcheck disable=SC1090
 set -a
