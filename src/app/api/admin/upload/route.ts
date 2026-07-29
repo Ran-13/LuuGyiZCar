@@ -1,9 +1,13 @@
+import Busboy from "busboy";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
+import { Readable } from "stream";
 import { UPLOAD_DIR, UPLOAD_PUBLIC_PREFIX } from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
+
+export const runtime = "nodejs";
 
 const MAX_BYTES = 100 * 1024 * 1024;
 const ALLOWED = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
@@ -64,45 +68,106 @@ function sniffImageType(buf: Buffer): keyof typeof EXT | null {
   return null;
 }
 
+interface ParsedUpload {
+  slot: string;
+  mimeType: string;
+  buffer: Buffer;
+}
+
+async function parseMultipartUpload(request: Request): Promise<ParsedUpload> {
+  if (!request.body) {
+    throw new Error("Missing request body");
+  }
+
+  const headers = Object.fromEntries(request.headers.entries());
+  const busboy = Busboy({ headers });
+
+  let slot = "banner";
+  let mimeType = "";
+  let size = 0;
+  let tooLarge = false;
+  let fileFound = false;
+  const chunks: Buffer[] = [];
+
+  return new Promise<ParsedUpload>((resolve, reject) => {
+    busboy.on("field", (name, value) => {
+      if (name === "slot") slot = value;
+    });
+
+    busboy.on("file", (name, file, info) => {
+      if (name !== "file") {
+        file.resume();
+        return;
+      }
+
+      fileFound = true;
+      mimeType = info.mimeType;
+
+      file.on("data", (chunk: Buffer) => {
+        if (tooLarge) return;
+        size += chunk.length;
+        if (size > MAX_BYTES) {
+          tooLarge = true;
+          return;
+        }
+        chunks.push(Buffer.from(chunk));
+      });
+
+      file.on("error", reject);
+    });
+
+    busboy.on("error", reject);
+    busboy.on("finish", () => {
+      if (!fileFound) {
+        reject(new Error("Missing file"));
+        return;
+      }
+      if (tooLarge) {
+        reject(new Error("File too large (max 100MB)"));
+        return;
+      }
+      resolve({
+        slot,
+        mimeType,
+        buffer: Buffer.concat(chunks),
+      });
+    });
+
+    Readable.fromWeb(request.body as never).pipe(busboy);
+  });
+}
+
 export async function POST(request: Request) {
   const gate = await requireAdminApi(request);
   if (!gate.ok) return gate.response;
 
-  let form: FormData;
+  let upload: ParsedUpload;
   try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    upload = await parseMultipartUpload(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid form data";
+    const status = message.includes("too large") ? 413 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 
-  const file = form.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Missing file" }, { status: 400 });
-  }
-
-  if (!ALLOWED.has(file.type)) {
+  if (!ALLOWED.has(upload.mimeType)) {
     return NextResponse.json(
       { error: "Only GIF, JPG, PNG, or WebP allowed" },
       { status: 400 },
     );
   }
 
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "File too large (max 100MB)" }, { status: 400 });
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const sniffed = sniffImageType(buffer);
-  if (!sniffed || sniffed !== file.type) {
+  const sniffed = sniffImageType(upload.buffer);
+  if (!sniffed || sniffed !== upload.mimeType) {
     return NextResponse.json({ error: "File content is not a valid image" }, { status: 400 });
   }
 
-  const slot = String(form.get("slot") ?? "banner").replace(/[^a-z0-9-]/gi, "");
+  const slot = upload.slot.replace(/[^a-z0-9-]/gi, "");
   const ext = EXT[sniffed];
   const filename = `${slot}-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
 
   await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(path.join(UPLOAD_DIR, filename), buffer);
+  await writeFile(path.join(UPLOAD_DIR, filename), upload.buffer);
 
   const imageUrl = `${UPLOAD_PUBLIC_PREFIX}/${filename}`;
   return NextResponse.json(
