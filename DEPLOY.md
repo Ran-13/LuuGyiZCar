@@ -67,13 +67,47 @@ cd ~/LuuGyiZCar
 
 Each command will:
 
-1. Create `sites/<name>/.env` with strong random admin secrets  
-2. Build & start a Docker container on localhost only  
-3. Add a **new** nginx site file (does not edit TeleManager / Youtube configs)  
-4. Request HTTPS via Certbot  
-5. Print **Admin URL, username, password** — save these somewhere safe  
+1. Create `sites/<name>/.env` with strong random admin secrets
+2. Build & start a Docker container on localhost only
+3. Add a **new** nginx site file (does not edit TeleManager / Youtube configs)
+4. Request HTTPS via Certbot
+5. Print **Admin URL, username, password** — save these somewhere safe
 
-If a site folder already exists, the script stops safely. To recreate, remove only that site’s folder after `down` (see §6).
+If a site folder already exists, the script stops safely. To **start over** one site, use §2b.
+
+### 2b. Fresh setup — akogyivip.site only (from zero)
+
+Use this if a previous deploy failed or you want new admin passwords and a clean container.
+
+**Namecheap DNS** (if not done yet): `@` and `www` → **A** → your VPS IP.
+
+**On the VPS:**
+
+```bash
+cd ~/LuuGyiZCar
+git pull
+chmod +x scripts/*.sh
+
+# Wipes only akogyivip (backs up old sites/akogyivip/ folder), then redeploys
+./scripts/fresh-site.sh akogyivip akogyivip.site 8082
+```
+
+This will:
+
+1. Stop container `luugyi-akogyivip` only  
+2. Remove nginx file `luugyi-akogyivip` only  
+3. Backup `sites/akogyivip/` → `sites/akogyivip.bak-<date>/`  
+4. Create new `.env`, build Docker, nginx, certbot  
+5. Print **new** admin URL / username / password — save them  
+
+`luugyizcar.site` and TeleManager / Youtube are **not** touched.
+
+Check DNS before expecting HTTPS:
+
+```bash
+dig +short akogyivip.site
+curl -sI http://127.0.0.1:8082 | head -3
+```
 
 ---
 
@@ -119,9 +153,9 @@ grep -E 'NEXT_PUBLIC_SITE_URL|ADMIN_PATH|ADMIN_USERNAME' sites/akogyivip/.env
 
 In each admin panel you can:
 
-- Edit VIP dialog + home ads text  
-- Upload GIF banners (home top / bottom, video mid)  
-- Enable/disable placements  
+- Edit VIP dialog + home ads text
+- Upload GIF banners (home top / bottom, video mid)
+- Enable/disable placements
 
 Plain `/admin` returns **404** when a secret slug is set.
 
@@ -137,7 +171,8 @@ On the VPS:
 cd ~/LuuGyiZCar
 
 # One site
-./scripts/upgrade-site.sh akogyivip
+https://akogyivip.site
+
 ./scripts/upgrade-site.sh luugyizcar
 
 # Or both
@@ -146,9 +181,9 @@ cd ~/LuuGyiZCar
 
 Preserved across upgrades:
 
-- `sites/*/data/ads.json` (announcements & banner URLs)  
-- `sites/*/uploads/` (GIF files)  
-- `sites/*/.env` (passwords & secret admin paths)  
+- `sites/*/data/ads.json` (announcements & banner URLs)
+- `sites/*/uploads/` (GIF files)
+- `sites/*/.env` (passwords & secret admin paths)
 
 ---
 
