@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { UPLOAD_DIR, UPLOAD_PUBLIC_PREFIX } from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
@@ -9,6 +10,9 @@ export const runtime = "nodejs";
 
 const MAX_BYTES = 100 * 1024 * 1024;
 const ALLOWED = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
+
+/** Target max width for banner images — wider GIFs are scaled down. */
+const MAX_WIDTH = 1920;
 
 const EXT: Record<string, string> = {
   "image/gif": "gif",
@@ -121,15 +125,75 @@ export async function POST(request: Request) {
   }
 
   const slot = upload.slot.replace(/[^a-z0-9-]/gi, "");
-  const ext = EXT[sniffed];
-  const filename = `${slot}-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
-
   await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(path.join(UPLOAD_DIR, filename), upload.buffer);
+
+  // ── Optimize the image for fast loading ────────────────────────────
+  let optimized: Buffer;
+  let ext: string;
+
+  try {
+    const img = sharp(upload.buffer, {
+      // animated: true preserves all frames in GIFs / animated WebP
+      animated: true,
+      // Limit memory for very large animated GIFs
+      limitInputPixels: 268402689, // ~16384 x 16384
+    });
+
+    const meta = await img.metadata();
+    const isAnimated = (meta.pages ?? 1) > 1;
+
+    if (isAnimated) {
+      // Animated GIF/WebP → optimized animated WebP (typically 60-80% smaller)
+      const pipeline = meta.width && meta.width > MAX_WIDTH
+        ? img.resize({ width: MAX_WIDTH, withoutEnlargement: true })
+        : img;
+      optimized = await pipeline
+        .webp({ quality: 75, effort: 4, loop: meta.loop ?? 0 })
+        .toBuffer();
+      ext = "webp";
+    } else if (sniffed === "image/gif" || sniffed === "image/png") {
+      // Static GIF/PNG → WebP (much smaller, lossless-ish)
+      const pipeline = meta.width && meta.width > MAX_WIDTH
+        ? img.resize({ width: MAX_WIDTH, withoutEnlargement: true })
+        : img;
+      optimized = await pipeline
+        .webp({ quality: 85, effort: 4 })
+        .toBuffer();
+      ext = "webp";
+    } else if (sniffed === "image/jpeg") {
+      // JPEG → optimized JPEG
+      const pipeline = meta.width && meta.width > MAX_WIDTH
+        ? img.resize({ width: MAX_WIDTH, withoutEnlargement: true })
+        : img;
+      optimized = await pipeline
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+      ext = "jpg";
+    } else {
+      // Already WebP — re-encode to ensure good compression
+      const pipeline = meta.width && meta.width > MAX_WIDTH
+        ? img.resize({ width: MAX_WIDTH, withoutEnlargement: true })
+        : img;
+      optimized = await pipeline
+        .webp({ quality: 80, effort: 4 })
+        .toBuffer();
+      ext = "webp";
+    }
+  } catch {
+    // If sharp fails (corrupt file, etc.), save the original
+    optimized = upload.buffer;
+    ext = EXT[sniffed];
+  }
+
+  const filename = `${slot}-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+  await writeFile(path.join(UPLOAD_DIR, filename), optimized);
+
+  const sizeBefore = (upload.buffer.length / 1024).toFixed(0);
+  const sizeAfter = (optimized.length / 1024).toFixed(0);
 
   const imageUrl = `${UPLOAD_PUBLIC_PREFIX}/${filename}`;
   return NextResponse.json(
-    { imageUrl },
+    { imageUrl, optimized: { before: `${sizeBefore}KB`, after: `${sizeAfter}KB` } },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

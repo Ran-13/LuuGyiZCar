@@ -44,37 +44,20 @@ for env in "${envs[@]}"; do
 
   echo "==> Regenerating $FILE ($DOMAIN → 127.0.0.1:$PORT)"
 
-  # If Certbot has already modified the file, we need to preserve the SSL
-  # server block(s). Extract every server{} block that contains "listen 443"
-  # or "managed by Certbot", then append them after our new HTTP template.
-  SSL_BLOCKS=""
+  # If the file already exists with Certbot SSL blocks, skip regeneration.
+  # Instead, only patch the proxy/static/gzip directives that are safe to add.
+  # Re-running certbot --nginx is the correct way to update SSL config.
   if [[ -f "$FILE" ]] && grep -q "managed by Certbot" "$FILE"; then
-    # Use awk to extract complete server{} blocks containing ssl/certbot
-    SSL_BLOCKS="$(awk '
-      /^server\s*\{/ { depth=1; block=$0"\n"; next }
-      depth > 0 {
-        block = block $0 "\n"
-        for (i=1; i<=length($0); i++) {
-          c = substr($0,i,1)
-          if (c == "{") depth++
-          if (c == "}") depth--
-        }
-        if (depth <= 0) {
-          if (block ~ /listen 443|managed by Certbot/) print block
-          block = ""
-        }
-      }
-    ' "$FILE")"
+    echo "  $name: SSL config managed by Certbot — skipping regeneration (run certbot --nginx to update SSL)"
+    # Just ensure the symlink exists
+    ln -sfn "$FILE" "/etc/nginx/sites-enabled/luugyi-$name"
+    echo "  Done: $name (kept existing SSL config)"
+    continue
   fi
 
-  # Generate new http block from template
+  # No SSL yet — safe to generate from template
   sed "s|YOUR-DOMAIN.com|${DOMAIN}|g; s/8082/${PORT}/g; s|UPLOADS_ROOT|${UPLOADS_ROOT}|g" \
     "$TEMPLATE" > "${FILE}.new"
-
-  # Append preserved SSL blocks
-  if [[ -n "$SSL_BLOCKS" ]]; then
-    printf "\n%s" "$SSL_BLOCKS" >> "${FILE}.new"
-  fi
 
   mv "${FILE}.new" "$FILE"
   ln -sfn "$FILE" "/etc/nginx/sites-enabled/luugyi-$name"
