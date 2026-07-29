@@ -49,6 +49,9 @@ export async function PUT(request: Request) {
   };
 
   const saved = await writeAdsConfig({
+    site: {
+      siteName: String(body.site?.siteName ?? current.site.siteName),
+    },
     announcement: {
       enabled: Boolean(announcement.enabled),
       showDialog: announcement.showDialog !== false,

@@ -8,9 +8,10 @@ import {
   type AdsConfig,
   type AdSlotId,
   type AnnouncementConfig,
+  type SiteConfig,
 } from "@/lib/ads-types";
 
-export type { AdBannerConfig, AdsConfig, AdSlotId, AnnouncementConfig };
+export type { AdBannerConfig, AdsConfig, AdSlotId, AnnouncementConfig, SiteConfig };
 export { AD_SLOTS, DEFAULT_ADS_CONFIG, isSlotId };
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -29,6 +30,7 @@ function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConf
 }
 
 function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig {
+  const site: Partial<SiteConfig> = raw?.site ?? {};
   const announcement: Partial<AnnouncementConfig> = raw?.announcement ?? {};
   const bannersIn: Partial<Record<AdSlotId, Partial<AdBannerConfig>>> = raw?.banners ?? {};
 
@@ -38,6 +40,12 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
   }
 
   return {
+    site: {
+      siteName:
+        typeof site.siteName === "string" && site.siteName.trim()
+          ? site.siteName.trim()
+          : DEFAULT_ADS_CONFIG.site.siteName,
+    },
     announcement: {
       enabled: announcement.enabled !== false,
       showDialog: announcement.showDialog !== false,

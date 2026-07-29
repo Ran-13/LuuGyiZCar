@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { isAdminUiPath } from "@/lib/admin-path";
 import { CATEGORIES } from "@/lib/categories";
 
-export default function Footer() {
+export default function Footer({ siteName }: { siteName: string }) {
   const pathname = usePathname();
   if (isAdminUiPath(pathname)) return null;
 
@@ -25,12 +25,12 @@ export default function Footer() {
         </nav>
 
         <p className="mt-6 max-w-3xl text-xs leading-relaxed text-ink-400">
-          LuuGyi Zcar is an adult video streaming index. All content is restricted to adults 18
+          {siteName} is an adult video streaming index. All content is restricted to adults 18
           years or older.
         </p>
 
         <p className="mt-4 text-xs text-ink-400">
-          © {new Date().getFullYear()} LuuGyi Zcar. All rights reserved.
+          © {new Date().getFullYear()} {siteName}. All rights reserved.
         </p>
       </div>
     </footer>

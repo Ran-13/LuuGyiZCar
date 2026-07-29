@@ -45,13 +45,22 @@ export interface AnnouncementConfig {
   adsContactUrl: string;
 }
 
+export interface SiteConfig {
+  /** Brand name shown in header, footer, and metadata. */
+  siteName: string;
+}
+
 export interface AdsConfig {
+  site: SiteConfig;
   announcement: AnnouncementConfig;
   banners: Record<AdSlotId, AdBannerConfig>;
   updatedAt: string;
 }
 
 export const DEFAULT_ADS_CONFIG: AdsConfig = {
+  site: {
+    siteName: "LuuGyi Zcar",
+  },
   announcement: {
     enabled: true,
     showDialog: true,

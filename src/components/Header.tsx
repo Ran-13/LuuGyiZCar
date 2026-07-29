@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import { isAdminUiPath } from "@/lib/admin-path";
 import { CATEGORIES } from "@/lib/categories";
+import { splitSiteName } from "@/lib/site-brand";
 import SearchBar from "./SearchBar";
 
 const LIBRARY_LINKS = [
@@ -13,9 +14,10 @@ const LIBRARY_LINKS = [
   { href: "/history", label: "Watch history", Icon: History },
 ] as const;
 
-export default function Header() {
+export default function Header({ siteName }: { siteName: string }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const brand = splitSiteName(siteName);
 
   if (isAdminUiPath(pathname)) return null;
 
@@ -39,8 +41,12 @@ export default function Header() {
           onClick={closeMenu}
           className="shrink-0 text-lg font-black tracking-tighter sm:text-xl"
         >
-          <span className="text-ink-100">LuuGyi</span>
-          <span className="ml-1 rounded bg-brand-500 px-1.5 py-0.5 text-black">Zcar</span>
+          <span className="text-ink-100">{brand.main}</span>
+          {brand.badge ? (
+            <span className="ml-1 rounded bg-brand-500 px-1.5 py-0.5 text-black">
+              {brand.badge}
+            </span>
+          ) : null}
         </Link>
 
         {/* Desktop category rail sits inline with the logo to keep the bar to one row. */}

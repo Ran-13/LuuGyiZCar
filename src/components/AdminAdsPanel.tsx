@@ -113,6 +113,28 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
       </div>
 
       <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
+        <h2 className="font-semibold text-ink-100">Site branding</h2>
+        <p className="mt-1 text-sm text-ink-400">
+          This name is used in the header, footer, and browser page title for this site only.
+        </p>
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Site name
+          <input
+            value={config.site.siteName}
+            onChange={(e) =>
+              setConfig((prev) => ({
+                ...prev,
+                site: { ...prev.site, siteName: e.target.value },
+              }))
+            }
+            placeholder="AkoGyi Vip"
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+        </label>
+      </section>
+
+      <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-ink-100">Home announcement</h2>
           <div className="flex flex-wrap items-center gap-4 text-sm text-ink-300">
