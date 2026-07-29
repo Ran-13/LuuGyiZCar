@@ -29,11 +29,9 @@ export default async function HomePage() {
     readAdsConfig(),
   ]);
 
-  const dialogVersion = `${ads.updatedAt}:${ads.announcement.text.slice(0, 40)}`;
-
   return (
     <>
-      <AnnouncementDialog announcement={ads.announcement} version={dialogVersion} />
+      <AnnouncementDialog announcement={ads.announcement} />
 
       {/* The header carries the same rail on lg+, so this is the mobile affordance. */}
       <nav

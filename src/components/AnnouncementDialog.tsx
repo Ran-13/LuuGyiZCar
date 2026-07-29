@@ -3,12 +3,9 @@
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { AnnouncementConfig } from "@/lib/ads-types";
-import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 interface AnnouncementDialogProps {
   announcement: AnnouncementConfig;
-  /** Bumps when admin saves — re-shows the dialog for returning visitors. */
-  version: string;
 }
 
 function telegramHandle(url: string, fallback = ""): string {
@@ -19,7 +16,7 @@ function telegramHandle(url: string, fallback = ""): string {
   return fallback;
 }
 
-export default function AnnouncementDialog({ announcement, version }: AnnouncementDialogProps) {
+export default function AnnouncementDialog({ announcement }: AnnouncementDialogProps) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -29,15 +26,8 @@ export default function AnnouncementDialog({ announcement, version }: Announceme
       return;
     }
 
-    try {
-      const seen = window.localStorage.getItem(STORAGE_KEYS.announcementDialogSeen);
-      if (seen === version) return;
-    } catch {
-      // Private mode / blocked storage — still show once this session.
-    }
-
     setOpen(true);
-  }, [announcement.enabled, announcement.showDialog, announcement.text, version]);
+  }, [announcement.enabled, announcement.showDialog, announcement.text]);
 
   useEffect(() => {
     if (!open) return;
@@ -58,11 +48,6 @@ export default function AnnouncementDialog({ announcement, version }: Announceme
   }, [open]);
 
   function dismiss() {
-    try {
-      window.localStorage.setItem(STORAGE_KEYS.announcementDialogSeen, version);
-    } catch {
-      // ignore
-    }
     setOpen(false);
   }
 
