@@ -66,7 +66,7 @@ export default function VideoCard({ video, priority = false }: Props) {
           whose top-right corner is the thumbnail's top-right corner. */}
       <FavoriteButton video={video} />
 
-      <Link href={`/video/${video.id}`} className="block">
+      <Link href={`/video/${video.id}`} className="exo-int-trigger block">
         <div className="relative aspect-video overflow-hidden rounded-md bg-ink-800 transition-transform duration-200 group-hover:scale-[1.02]">
           {src ? (
             <Image

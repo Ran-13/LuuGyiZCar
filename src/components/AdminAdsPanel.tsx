@@ -586,8 +586,13 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
         </label>
 
         <p className="mt-4 rounded-md bg-ink-950 px-3 py-2 text-xs text-ink-400">
-          Interstitial frequency is set in the ExoClick zone itself (Capping → Frequency), not here.
-          The two interstitial zones above fire when a visitor clicks a video from a listing page.
+          Interstitial zones use ExoClick&apos;s <code className="text-ink-300">fp-interstitial.js</code>{" "}
+          (not the banner <code className="text-ink-300">&lt;ins&gt;</code> tag). Create a{" "}
+          <strong className="text-ink-300">Fullpage Interstitial</strong> zone type in ExoClick —
+          desktop and mobile are separate. Trigger Method should be{" "}
+          <strong className="text-ink-300">Clicking on Links</strong> (or specific class{" "}
+          <code className="text-ink-300">exo-int-trigger</code> on video cards). Frequency is set in
+          ExoClick (Capping), not here. The Ad tag class field above is for banner zones only.
         </p>
 
         <label className="mt-4 block text-sm text-ink-300">
