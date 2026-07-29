@@ -145,6 +145,31 @@ if "proxy_hide_header Pragma;" not in text and "proxy_hide_header Cache-Control;
     )
     changes.append("hide upstream Pragma")
 
+# A vhost can have proxy_cache (so step 3c is skipped) yet no Cache-Control
+# override at all. Next.js' own header then reaches the browser:
+#   s-maxage=60, stale-while-revalidate=31535940
+# 31535940s is a YEAR — browsers keep serving stale HTML that references the
+# previous build's /_next/static hashes, so CSS and assets 404 and the page
+# renders unstyled until the visitor force-refreshes. Add the override when the
+# main location block is missing it.
+main_loc = re.search(r"location / \{(?:[^{}]|\{[^{}]*\})*?\}", text)
+if main_loc and "add_header Cache-Control" not in main_loc.group(0):
+    block = main_loc.group(0)
+    anchor = re.search(r"proxy_read_timeout\s+\d+s;|proxy_cache\s+luugyi_cache;", block)
+    if anchor:
+        injected = (
+            anchor.group(0)
+            + "\n\n        # Always revalidate HTML so a deploy is picked up at once."
+            + "\n        # no-cache (not no-store) keeps the back/forward cache working."
+            + "\n        proxy_hide_header Cache-Control;"
+            + "\n        proxy_hide_header Pragma;"
+            + '\n        add_header Cache-Control "no-cache" always;'
+        )
+        text = text.replace(block, block.replace(anchor.group(0), injected, 1), 1)
+        changes.append("added missing Cache-Control override (stale-HTML fix)")
+    else:
+        print("  ! location / has no anchor directive — add Cache-Control manually")
+
 # Image optimization is CPU-bound; without a server-side cache every cold
 # browser re-runs the resize/encode in Node.
 img = re.search(r"location /_next/image[^{]*\{(?:[^{}]|\{[^{}]*\})*?\}", text)
