@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import EmptyState from "@/components/EmptyState";
+import ExoClickInterstitial from "@/components/ExoClickInterstitial";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
 import SortTabs from "@/components/SortTabs";
+import { readAdsConfig } from "@/lib/ads";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { DEFAULT_ORDER, isSortOrder, searchVideos } from "@/lib/eporner";
 
@@ -48,7 +50,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   const order = isSortOrder(rawOrder) ? rawOrder : DEFAULT_ORDER;
 
-  const result = await searchVideos({ query: category.query, perPage: BATCH_SIZE, order });
+  // readAdsConfig is React-cached, so this adds no disk read beyond the layout's.
+  const [result, ads] = await Promise.all([
+    searchVideos({ query: category.query, perPage: BATCH_SIZE, order }),
+    readAdsConfig(),
+  ]);
 
   const subtitle =
     result.totalCount > 0
@@ -57,6 +63,9 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   return (
     <>
+      {/* Fires on video-card clicks from this grid. */}
+      <ExoClickInterstitial network={ads.network} />
+
       <SectionHeading as="h1" title={`${category.label} Videos`} subtitle={subtitle} />
 
       <div className="mb-6">

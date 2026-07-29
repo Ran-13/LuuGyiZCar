@@ -13,8 +13,6 @@ export const STORAGE_KEYS = {
   favorites: "luugyi:favorites",
   history: "luugyi:history",
   recentSearches: "luugyi:recent-searches",
-  /** Epoch ms of the last interstitial shown, for the cooldown gate. */
-  interstitialShownAt: "luugyi:interstitial-shown-at",
 } as const;
 
 export const MAX_HISTORY = 100;

@@ -60,13 +60,17 @@
         "enabled": false,
         "zoneId": ""
       },
-      "net-video-interstitial": {
+      "net-interstitial-desktop": {
+        "enabled": false,
+        "zoneId": ""
+      },
+      "net-interstitial-mobile": {
         "enabled": false,
         "zoneId": ""
       }
     },
     "popunderZoneId": "",
     "verificationCode": "",
-    "interstitialCooldownMinutes": 1
+    "insClass": ""
   }
 }

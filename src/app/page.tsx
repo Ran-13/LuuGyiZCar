@@ -2,6 +2,7 @@ import Link from "next/link";
 import AdBanner from "@/components/AdBanner";
 import AnnouncementDialog from "@/components/AnnouncementDialog";
 import EmptyState from "@/components/EmptyState";
+import ExoClickInterstitial from "@/components/ExoClickInterstitial";
 import ExoClickZone from "@/components/ExoClickZone";
 import HomeAnnouncement from "@/components/HomeAnnouncement";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
@@ -33,6 +34,9 @@ export default async function HomePage() {
   return (
     <>
       <AnnouncementDialog announcement={ads.announcement} />
+
+      {/* Fires on video-card clicks from this grid — the "Clicking on Links" trigger. */}
+      <ExoClickInterstitial network={ads.network} />
 
       {/* The header carries the same rail on lg+, so this is the mobile affordance. */}
       <nav

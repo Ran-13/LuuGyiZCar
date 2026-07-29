@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import EmptyState from "@/components/EmptyState";
+import ExoClickInterstitial from "@/components/ExoClickInterstitial";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
 import SortTabs from "@/components/SortTabs";
+import { readAdsConfig } from "@/lib/ads";
 import { DEFAULT_ORDER, isSortOrder, searchVideos } from "@/lib/eporner";
 
 export const revalidate = 900;
@@ -35,10 +37,17 @@ export default async function SearchPage({ searchParams }: PageProps) {
   }
 
   const order = isSortOrder(rawOrder) ? rawOrder : DEFAULT_ORDER;
-  const result = await searchVideos({ query, perPage: BATCH_SIZE, order });
+  // readAdsConfig is React-cached, so this adds no disk read beyond the layout's.
+  const [result, ads] = await Promise.all([
+    searchVideos({ query, perPage: BATCH_SIZE, order }),
+    readAdsConfig(),
+  ]);
 
   return (
     <>
+      {/* Fires on video-card clicks from this grid. */}
+      <ExoClickInterstitial network={ads.network} />
+
       <SectionHeading
         as="h1"
         title={`Results for “${query}”`}

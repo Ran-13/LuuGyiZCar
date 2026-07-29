@@ -1,94 +1,72 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
 import type { AdNetworkConfig } from "@/lib/ads-types";
-import { EXOCLICK_INS_CLASS, isValidZoneId } from "@/lib/ads-types";
-import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { EXOCLICK_INS_CLASS, INTERSTITIAL_SLOTS, isValidZoneId } from "@/lib/ads-types";
 
-const SLOT = "net-video-interstitial" as const;
-
-/**
- * localStorage is an external store, so the cooldown is read through
- * useSyncExternalStore rather than useEffect + setState — the latter is
- * rejected by `react-hooks/set-state-in-effect` and would also render the
- * overlay for one frame before hiding it.
- *
- * KNOWN LIMITATION: this fires on client-side navigation (clicking a video
- * card) but NOT on a direct page load of /video/<id> — a shared or search-engine
- * link. On that path React hydrates using getServerSnapshot, which is always
- * false because the server cannot know a visitor's cooldown, and the tag never
- * appears. Notifying once after mount (below) was expected to fix it and
- * verifiably does not; the cause is not yet identified. Card clicks are the
- * dominant path, so this ships gated to that until the direct-load case is
- * understood — do not assume it works there.
- */
-const subscribe = (onStoreChange: () => void) => {
-  const id = setTimeout(onStoreChange, 0);
-  return () => clearTimeout(id);
-};
-
-function readLastShown(): number {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.interstitialShownAt);
-    const n = raw ? Number.parseInt(raw, 10) : 0;
-    return Number.isFinite(n) ? n : 0;
-  } catch {
-    // Private mode / storage disabled — treat as never shown.
-    return 0;
+declare global {
+  interface Window {
+    AdProvider?: unknown[];
   }
 }
 
-interface Props {
-  network: AdNetworkConfig;
+/**
+ * Queues a serve pass for every unprocessed <ins> on the page.
+ *
+ * Kept out of the component body: `react-hooks/immutability` rejects assigning
+ * to an outer value (here `window`) inside a component or hook.
+ */
+function queueAdServe(): void {
+  const provider = window.AdProvider ?? [];
+  window.AdProvider = provider;
+  provider.push({ serve: {} });
 }
 
 /**
- * Full-page ExoClick interstitial shown when a video page opens.
+ * ExoClick fullpage interstitial tags.
  *
- * Video cards navigate with <Link>, so arriving here is a client-side route
- * change, not a page load. This component mounting is what triggers delivery —
- * the same mechanism ExoClickZone relies on.
+ * Belongs on LISTING pages (home, category, search), not the video page. The
+ * zone's Trigger Method is "Clicking on Links": ExoClick's script intercepts a
+ * link click on the page the tag lives on, shows the ad, then continues to the
+ * destination. Putting the tag on the video page would instead fire it when
+ * leaving that page, which is not what a "between grid and video" ad means.
+ *
+ * Desktop and mobile are separate zone TYPES in ExoClick, so both ids render;
+ * each zone only serves on its matching device.
+ *
+ * Frequency is deliberately not handled here — the zone's own Capping setting
+ * enforces it server-side. Duplicating that in localStorage would give two
+ * competing gates and make "why is no ad showing" impossible to reason about.
  */
-export default function ExoClickInterstitial({ network }: Props) {
-  const zone = network?.zones?.[SLOT];
-  const zoneId = zone?.zoneId ?? "";
-  const configured = Boolean(network?.enabled && zone?.enabled && isValidZoneId(zoneId));
+export default function ExoClickInterstitial({ network }: { network: AdNetworkConfig }) {
+  const active = INTERSTITIAL_SLOTS.filter((slot) => {
+    const zone = network?.zones?.[slot];
+    return Boolean(network?.enabled && zone?.enabled && isValidZoneId(zone.zoneId));
+  });
 
-  const cooldownMs = Math.max(0, network?.interstitialCooldownMinutes ?? 0) * 60_000;
-
-  // Returns a boolean — a primitive, so Object.is keeps the snapshot stable and
-  // there is no render loop despite reading Date.now().
-  const getSnapshot = useCallback(() => {
-    if (!configured) return false;
-    if (cooldownMs === 0) return true;
-    return Date.now() - readLastShown() >= cooldownMs;
-  }, [configured, cooldownMs]);
-
-  // The server cannot know the visitor's cooldown, so it never renders the tag.
-  const getServerSnapshot = useCallback(() => false, []);
-
-  const allowed = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const servedZoneId = useRef<string | null>(null);
+  const servedKey = useRef<string | null>(null);
+  const key = active.map((slot) => network.zones[slot].zoneId).join(",");
 
   useEffect(() => {
-    if (!allowed) return;
-    if (servedZoneId.current === zoneId) return;
-    servedZoneId.current = zoneId;
+    if (!key) return;
+    // A re-render must not queue the same zones twice.
+    if (servedKey.current === key) return;
+    servedKey.current = key;
 
-    // Stamping the time is a side effect on an external store, which is what
-    // useEffect is for — the same shape as WatchHistoryRecorder.
-    try {
-      localStorage.setItem(STORAGE_KEYS.interstitialShownAt, String(Date.now()));
-    } catch {
-      // Non-fatal: the interstitial simply is not rate-limited on this device.
-    }
+    queueAdServe();
+  }, [key]);
 
-    window.AdProvider = window.AdProvider || [];
-    window.AdProvider.push({ serve: {} });
-  }, [allowed, zoneId]);
+  if (active.length === 0) return null;
 
-  if (!allowed) return null;
-
-  // No wrapper styling: ExoClick positions the fullpage creative itself.
-  return <ins className={network.insClass || EXOCLICK_INS_CLASS} data-zoneid={zoneId} />;
+  return (
+    <>
+      {active.map((slot) => (
+        <ins
+          key={slot}
+          className={network.insClass || EXOCLICK_INS_CLASS}
+          data-zoneid={network.zones[slot].zoneId}
+        />
+      ))}
+    </>
+  );
 }

@@ -2,7 +2,6 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   AD_SLOTS,
-  MAX_INTERSTITIAL_COOLDOWN_MINUTES,
   NETWORK_SLOTS,
   isValidInsClass,
   isValidVerificationCode,
@@ -95,10 +94,6 @@ export async function PUT(request: Request) {
 
     // 0 means "every video", so it must survive validation rather than being
     // treated as a missing value.
-    const cooldown = Number.parseInt(String(body.network.interstitialCooldownMinutes ?? ""), 10);
-    network.interstitialCooldownMinutes = Number.isFinite(cooldown)
-      ? Math.min(Math.max(cooldown, 0), MAX_INTERSTITIAL_COOLDOWN_MINUTES)
-      : current.network.interstitialCooldownMinutes;
   }
 
   const announcement = {
