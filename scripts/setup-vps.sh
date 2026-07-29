@@ -46,6 +46,11 @@ if [[ ! -f "$ROOT/sites/prod/data/ads.json" && -f "$ROOT/data/ads.json" ]]; then
   cp "$ROOT/data/ads.json" "$ROOT/sites/prod/data/ads.json"
 fi
 
+# The app runs in Docker as uid/gid 1001; mounted volumes must be writable.
+if command -v chown >/dev/null 2>&1; then
+  chown -R 1001:1001 "$ROOT/sites/prod/data" "$ROOT/sites/prod/uploads" 2>/dev/null || true
+fi
+
 if [[ -f "$ENV_FILE" ]]; then
   echo "Using existing $ENV_FILE"
 else

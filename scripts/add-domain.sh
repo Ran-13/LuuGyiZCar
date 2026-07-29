@@ -58,6 +58,11 @@ if [[ -f "$ROOT/data/ads.json" ]]; then
 fi
 touch "$DIR/uploads/ads/.gitkeep"
 
+# The app runs in Docker as uid/gid 1001; mounted volumes must be writable.
+if command -v chown >/dev/null 2>&1; then
+  chown -R 1001:1001 "$DIR/data" "$DIR/uploads" 2>/dev/null || true
+fi
+
 cat > "$ENV_FILE" <<EOF
 COMPOSE_PROJECT_NAME=luugyi-$NAME
 HOST_BIND=127.0.0.1

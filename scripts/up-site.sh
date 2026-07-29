@@ -32,6 +32,10 @@ if [[ ! -f "$ROOT/sites/$SITE/data/ads.json" && -f "$ROOT/data/ads.json" ]]; the
   cp "$ROOT/data/ads.json" "$ROOT/sites/$SITE/data/ads.json"
 fi
 
+if command -v chown >/dev/null 2>&1; then
+  chown -R 1001:1001 "$ROOT/sites/$SITE/data" "$ROOT/sites/$SITE/uploads" 2>/dev/null || true
+fi
+
 # shellcheck disable=SC1090
 set -a
 # shellcheck source=/dev/null

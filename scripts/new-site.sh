@@ -28,6 +28,10 @@ mkdir -p "$DIR/data" "$DIR/uploads/ads"
 cp "$ROOT/data/ads.json" "$DIR/data/ads.json" 2>/dev/null || true
 touch "$DIR/uploads/ads/.gitkeep"
 
+if command -v chown >/dev/null 2>&1; then
+  chown -R 1001:1001 "$DIR/data" "$DIR/uploads" 2>/dev/null || true
+fi
+
 cat > "$DIR/.env" <<EOF
 COMPOSE_PROJECT_NAME=luugyi-$NAME
 HOST_BIND=0.0.0.0
