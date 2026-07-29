@@ -13,6 +13,7 @@ import {
   isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
+  resolveInsClass,
   type AdBannerConfig,
   type AdNetworkConfig,
   type AdsConfig,
@@ -47,6 +48,7 @@ export {
   isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
+  resolveInsClass,
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -66,11 +68,13 @@ function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConf
 
 function normalizeZone(raw: Partial<NetworkZoneConfig> | undefined): NetworkZoneConfig {
   const zoneId = typeof raw?.zoneId === "string" ? raw.zoneId.trim() : "";
+  const insClass = typeof raw?.insClass === "string" ? raw.insClass.trim() : "";
   return {
     enabled: Boolean(raw?.enabled),
     // Rejected here as well as on save: the id lands in a DOM attribute, and a
     // hand-edited ads.json is not a trusted source.
     zoneId: isValidZoneId(zoneId) ? zoneId : "",
+    insClass: isValidInsClass(insClass) ? insClass : "",
   };
 }
 

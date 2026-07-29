@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { AdNetworkConfig, NetworkSlotId } from "@/lib/ads-types";
-import { EXOCLICK_INS_CLASS, isValidZoneId } from "@/lib/ads-types";
+import { isValidZoneId, resolveInsClass } from "@/lib/ads-types";
 
 declare global {
   interface Window {
@@ -51,7 +51,7 @@ export default function ExoClickZone({ network, slot, className = "" }: Props) {
       className={`flex justify-center overflow-hidden ${className}`}
     >
       {/* Per-site override, so each domain can run its own ExoClick account. */}
-      <ins className={network.insClass || EXOCLICK_INS_CLASS} data-zoneid={zoneId} />
+      <ins className={resolveInsClass(zone, network)} data-zoneid={zoneId} />
     </aside>
   );
 }

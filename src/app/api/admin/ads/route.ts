@@ -66,11 +66,15 @@ export async function PUT(request: Request) {
       const incoming = incomingZones[slot.id];
       if (!incoming) continue;
       const zoneId = typeof incoming.zoneId === "string" ? incoming.zoneId.trim() : "";
+      const zoneIns =
+        typeof incoming.insClass === "string" ? incoming.insClass.trim() : "";
       zones[slot.id] = {
         enabled: Boolean(incoming.enabled),
         // Zone ids reach a DOM attribute, so reject anything non-numeric here
         // rather than trusting the client that posted it.
         zoneId: isValidZoneId(zoneId) ? zoneId : "",
+        // Empty = fall back to site-wide / platform default.
+        insClass: zoneIns === "" || isValidInsClass(zoneIns) ? zoneIns : "",
       };
     }
 

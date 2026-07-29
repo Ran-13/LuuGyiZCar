@@ -65,6 +65,14 @@ export interface NetworkZoneConfig {
   enabled: boolean;
   /** ExoClick zone id — digits only, enforced on read and on save. */
   zoneId: string;
+  /**
+   * The `<ins class="…">` from this zone's ExoClick HTML tag.
+   *
+   * Required per zone when ExoClick issues a different class for each zone
+   * (common for Fullpage Interstitial vs Banner). Empty falls back to
+   * network.insClass, then EXOCLICK_INS_CLASS.
+   */
+  insClass: string;
 }
 
 export interface AdNetworkConfig {
@@ -95,12 +103,23 @@ export const EXOCLICK_VERIFICATION_META = "6a97888e-site-verification";
 /**
  * Default class name ExoClick's ad-provider.js scans for when placing a zone.
  *
- * Overridable per site (`AdNetworkConfig.insClass`) because the `6a97888e`
- * segment also appears in EXOCLICK_VERIFICATION_META and may be account-derived.
- * A mismatch fails silently — the script simply never fills the tag — so each
- * site can pin the exact class its own dashboard issued.
+ * Prefer setting `insClass` per zone from the dashboard tag — ExoClick often
+ * issues a different class for Banner vs Fullpage Interstitial (and even
+ * desktop vs mobile interstitial).
  */
 export const EXOCLICK_INS_CLASS = "eas6a97888e2";
+
+/** Pick the most specific valid <ins> class for a zone. */
+export function resolveInsClass(
+  zone: Pick<NetworkZoneConfig, "insClass"> | null | undefined,
+  network: Pick<AdNetworkConfig, "insClass"> | null | undefined,
+): string {
+  const zoneClass = zone?.insClass?.trim() ?? "";
+  if (zoneClass && isValidInsClass(zoneClass)) return zoneClass;
+  const siteClass = network?.insClass?.trim() ?? "";
+  if (siteClass && isValidInsClass(siteClass)) return siteClass;
+  return EXOCLICK_INS_CLASS;
+}
 
 /** Must be usable as a bare CSS class in a className attribute. */
 export function isValidInsClass(value: string): boolean {
@@ -225,11 +244,11 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
   network: {
     enabled: false,
     zones: {
-      "net-home-top": { enabled: false, zoneId: "" },
-      "net-home-bottom": { enabled: false, zoneId: "" },
-      "net-video-below": { enabled: false, zoneId: "" },
-      "net-interstitial-desktop": { enabled: false, zoneId: "" },
-      "net-interstitial-mobile": { enabled: false, zoneId: "" },
+      "net-home-top": { enabled: false, zoneId: "", insClass: "" },
+      "net-home-bottom": { enabled: false, zoneId: "", insClass: "" },
+      "net-video-below": { enabled: false, zoneId: "", insClass: "" },
+      "net-interstitial-desktop": { enabled: false, zoneId: "", insClass: "" },
+      "net-interstitial-mobile": { enabled: false, zoneId: "", insClass: "" },
     },
     popunderZoneId: "",
     verificationCode: "",

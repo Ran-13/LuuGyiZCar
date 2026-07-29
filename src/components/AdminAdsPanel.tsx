@@ -549,7 +549,7 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                     value={zone.zoneId}
                     inputMode="numeric"
                     onChange={(e) => updateZone(slot.id, { zoneId: e.target.value.trim() })}
-                    placeholder="e.g. 5241234"
+                    placeholder="e.g. 5990052"
                     className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
                       invalid ? "border-red-500" : "border-ink-700"
                     }`}
@@ -560,13 +560,36 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                     </span>
                   )}
                 </label>
+                <label className="mt-2 block text-sm text-ink-300">
+                  Ad tag class{" "}
+                  <span className="text-ink-400">(from ExoClick &lt;ins class=&quot;…&quot;&gt;)</span>
+                  <input
+                    value={zone.insClass ?? ""}
+                    onChange={(e) => updateZone(slot.id, { insClass: e.target.value.trim() })}
+                    placeholder={
+                      slot.id.includes("interstitial")
+                        ? "e.g. eas6a97888e35"
+                        : EXOCLICK_INS_CLASS
+                    }
+                    className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
+                      zone.insClass && !isValidInsClass(zone.insClass)
+                        ? "border-red-500"
+                        : "border-ink-700"
+                    }`}
+                  />
+                  <span className="mt-1 block text-xs text-ink-400">
+                    Copy exactly from this zone&apos;s HTML tag. Each zone can have a different
+                    class — mismatch = blank ads, no error.
+                  </span>
+                </label>
               </div>
             );
           })}
         </div>
 
         <label className="mt-4 block text-sm text-ink-300">
-          Ad tag class <span className="text-ink-400">(advanced — leave empty unless ads stay blank)</span>
+          Default ad tag class{" "}
+          <span className="text-ink-400">(fallback only — prefer per-zone class above)</span>
           <input
             value={config.network.insClass}
             onChange={(e) => updateNetwork({ insClass: e.target.value.trim() })}
@@ -578,21 +601,17 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
             }`}
           />
           <span className="mt-1 block text-xs text-ink-400">
-            Defaults to <code className="text-ink-300">{EXOCLICK_INS_CLASS}</code>. If this site
-            uses a different ExoClick account and its zone tag shows another{" "}
-            <code className="text-ink-300">ins class=&quot;…&quot;</code>, paste that class here —
-            a mismatch shows no ads and reports no error.
+            Used only when a zone&apos;s own Ad tag class is empty. Defaults to{" "}
+            <code className="text-ink-300">{EXOCLICK_INS_CLASS}</code>.
           </span>
         </label>
 
         <p className="mt-4 rounded-md bg-ink-950 px-3 py-2 text-xs text-ink-400">
-          Interstitial zones use ExoClick&apos;s <code className="text-ink-300">fp-interstitial.js</code>{" "}
-          (not the banner <code className="text-ink-300">&lt;ins&gt;</code> tag). Create a{" "}
-          <strong className="text-ink-300">Fullpage Interstitial</strong> zone type in ExoClick —
-          desktop and mobile are separate. Trigger Method should be{" "}
-          <strong className="text-ink-300">Clicking on Links</strong> (or specific class{" "}
-          <code className="text-ink-300">exo-int-trigger</code> on video cards). Frequency is set in
-          ExoClick (Capping), not here. The Ad tag class field above is for banner zones only.
+          Paste Zone ID + Ad tag class from each ExoClick zone&apos;s HTML tag. Example: Desktop
+          Interstitial often uses class <code className="text-ink-300">eas6a97888e35</code> while
+          Mobile uses <code className="text-ink-300">eas6a97888e33</code> and banners use{" "}
+          <code className="text-ink-300">eas6a97888e2</code> — they are not interchangeable.
+          Interstitials fire when a visitor clicks a video from home / category / search.
         </p>
 
         <label className="mt-4 block text-sm text-ink-300">
