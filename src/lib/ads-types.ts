@@ -59,6 +59,8 @@ export interface AnnouncementConfig {
 export interface SiteConfig {
   /** Brand name shown in header, footer, and metadata. */
   siteName: string;
+  /** Per-site description for SEO, previews, and footer copy. */
+  siteDescription: string;
 }
 
 export interface AdsConfig {
@@ -71,6 +73,7 @@ export interface AdsConfig {
 export const DEFAULT_ADS_CONFIG: AdsConfig = {
   site: {
     siteName: "LuuGyi Zcar",
+    siteDescription: "Browse and search HD videos across Korea, Japan, Asian, amateur and more categories.",
   },
   announcement: {
     enabled: true,

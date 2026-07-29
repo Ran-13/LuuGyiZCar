@@ -182,6 +182,22 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
             className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
           />
         </label>
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Site description
+          <textarea
+            value={config.site.siteDescription}
+            onChange={(e) =>
+              setConfig((prev) => ({
+                ...prev,
+                site: { ...prev.site, siteDescription: e.target.value },
+              }))
+            }
+            rows={3}
+            placeholder="Describe this site for Telegram preview and SEO"
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+        </label>
       </section>
 
       <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">

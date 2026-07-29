@@ -2,12 +2,13 @@ import type { Metadata, Viewport } from "next";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { readAdsConfig } from "@/lib/ads";
-import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const ads = await readAdsConfig();
   const siteName = ads.site.siteName;
+  const siteDescription = ads.site.siteDescription;
 
   return {
     // Without metadataBase every OG/Twitter image URL stays relative, and social
@@ -17,13 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
       default: `${siteName} — Free HD Videos`,
       template: `%s | ${siteName}`,
     },
-    description: SITE_DESCRIPTION,
+    description: siteDescription,
     openGraph: {
       siteName,
       type: "website",
       locale: "en_US",
       title: `${siteName} — Free HD Videos`,
-      description: SITE_DESCRIPTION,
+      description: siteDescription,
     },
     twitter: { card: "summary_large_image" },
   };
@@ -45,7 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="mx-auto w-full max-w-[1800px] flex-1 px-3 py-5 sm:px-5 sm:py-7">
           {children}
         </main>
-        <Footer siteName={ads.site.siteName} />
+        <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
       </body>
     </html>
   );

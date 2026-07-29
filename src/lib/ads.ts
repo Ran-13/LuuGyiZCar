@@ -91,6 +91,10 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
         typeof site.siteName === "string" && site.siteName.trim()
           ? site.siteName.trim()
           : DEFAULT_ADS_CONFIG.site.siteName,
+      siteDescription:
+        typeof site.siteDescription === "string" && site.siteDescription.trim()
+          ? site.siteDescription.trim()
+          : DEFAULT_ADS_CONFIG.site.siteDescription,
     },
     announcement: {
       enabled: announcement.enabled !== false,

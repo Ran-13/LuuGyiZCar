@@ -72,6 +72,7 @@ export async function PUT(request: Request) {
   const saved = await writeAdsConfig({
     site: {
       siteName: String(body.site?.siteName ?? current.site.siteName),
+      siteDescription: String(body.site?.siteDescription ?? current.site.siteDescription),
     },
     announcement: {
       enabled: Boolean(announcement.enabled),
