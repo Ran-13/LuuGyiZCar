@@ -69,7 +69,12 @@ if "proxy_cache luugyi_cache" in text:
     sys.exit(0)
 
 CACHE_BLOCK = """
-        # Nginx proxy cache — instant page loads for repeat visitors
+        # Tell browsers NOT to cache HTML — always fetch fresh from server
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+
+        # Nginx proxy cache — server-side only, instant for repeat visitors
         proxy_cache luugyi_cache;
         proxy_cache_valid 200 60s;
         proxy_cache_valid 301 302 10m;
