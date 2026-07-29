@@ -41,6 +41,11 @@ export const NETWORK_SLOTS = [
     label: "ExoClick — video page",
     description: "Below the player meta row",
   },
+  {
+    id: "net-video-interstitial",
+    label: "ExoClick — video interstitial",
+    description: "Full-page ad when opening a video (use a Fullpage Interstitial zone)",
+  },
 ] as const;
 
 export type NetworkSlotId = (typeof NETWORK_SLOTS)[number]["id"];
@@ -71,7 +76,19 @@ export interface AdNetworkConfig {
    * own ExoClick account without a class mismatch silently killing its ads.
    */
   insClass: string;
+  /**
+   * Minimum gap between interstitials, in minutes. 0 = show on every video.
+   *
+   * Sits on top of any frequency cap set in the ExoClick dashboard: a tube site
+   * opens many videos per session, and an overlay on each one drives people away.
+   */
+  interstitialCooldownMinutes: number;
 }
+
+/** Upper bound for the interstitial cooldown (24h). */
+export const MAX_INTERSTITIAL_COOLDOWN_MINUTES = 1440;
+
+export const DEFAULT_INTERSTITIAL_COOLDOWN_MINUTES = 1;
 
 /** Meta tag name ExoClick looks for when verifying domain ownership. */
 export const EXOCLICK_VERIFICATION_META = "6a97888e-site-verification";
@@ -212,10 +229,12 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-home-top": { enabled: false, zoneId: "" },
       "net-home-bottom": { enabled: false, zoneId: "" },
       "net-video-below": { enabled: false, zoneId: "" },
+      "net-video-interstitial": { enabled: false, zoneId: "" },
     },
     popunderZoneId: "",
     verificationCode: "",
     insClass: "",
+    interstitialCooldownMinutes: DEFAULT_INTERSTITIAL_COOLDOWN_MINUTES,
   },
   updatedAt: new Date(0).toISOString(),
 };

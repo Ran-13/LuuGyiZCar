@@ -6,7 +6,9 @@ import {
   DEFAULT_ADS_CONFIG,
   NETWORK_SLOTS,
   EXOCLICK_VERIFICATION_META,
+  DEFAULT_INTERSTITIAL_COOLDOWN_MINUTES,
   EXOCLICK_INS_CLASS,
+  MAX_INTERSTITIAL_COOLDOWN_MINUTES,
   isNetworkSlotId,
   isSlotId,
   isValidInsClass,
@@ -37,7 +39,9 @@ export type {
 export {
   AD_SLOTS,
   DEFAULT_ADS_CONFIG,
+  DEFAULT_INTERSTITIAL_COOLDOWN_MINUTES,
   EXOCLICK_INS_CLASS,
+  MAX_INTERSTITIAL_COOLDOWN_MINUTES,
   EXOCLICK_VERIFICATION_META,
   NETWORK_SLOTS,
   isNetworkSlotId,
@@ -84,6 +88,16 @@ function normalizeNetwork(raw: Partial<AdNetworkConfig> | undefined): AdNetworkC
     typeof raw?.verificationCode === "string" ? raw.verificationCode.trim() : "";
   const insClass = typeof raw?.insClass === "string" ? raw.insClass.trim() : "";
 
+  // 0 is a valid, meaningful value (show on every video), so a plain `|| default`
+  // would silently turn "always" into "every 30 minutes".
+  const cooldownRaw =
+    typeof raw?.interstitialCooldownMinutes === "number"
+      ? raw.interstitialCooldownMinutes
+      : Number.parseInt(String(raw?.interstitialCooldownMinutes ?? ""), 10);
+  const cooldown = Number.isFinite(cooldownRaw)
+    ? Math.min(Math.max(Math.trunc(cooldownRaw), 0), MAX_INTERSTITIAL_COOLDOWN_MINUTES)
+    : DEFAULT_INTERSTITIAL_COOLDOWN_MINUTES;
+
   return {
     enabled: Boolean(raw?.enabled),
     zones,
@@ -91,6 +105,7 @@ function normalizeNetwork(raw: Partial<AdNetworkConfig> | undefined): AdNetworkC
     verificationCode: isValidVerificationCode(verification) ? verification : "",
     // Empty is meaningful: the component falls back to the platform default.
     insClass: isValidInsClass(insClass) ? insClass : "",
+    interstitialCooldownMinutes: cooldown,
   };
 }
 

@@ -59,9 +59,14 @@
       "net-video-below": {
         "enabled": false,
         "zoneId": ""
+      },
+      "net-video-interstitial": {
+        "enabled": false,
+        "zoneId": ""
       }
     },
     "popunderZoneId": "",
-    "verificationCode": ""
+    "verificationCode": "",
+    "interstitialCooldownMinutes": 1
   }
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AdBanner from "@/components/AdBanner";
+import ExoClickInterstitial from "@/components/ExoClickInterstitial";
 import ExoClickZone from "@/components/ExoClickZone";
 import FavoriteButton from "@/components/FavoriteButton";
 import GridSkeleton from "@/components/GridSkeleton";
@@ -125,6 +126,8 @@ export default async function VideoPage({ params }: PageProps) {
       />
 
       <WatchHistoryRecorder video={video} />
+
+      <ExoClickInterstitial network={ads.network} />
 
       <div>
         {/* Full width, but never taller than the viewport — at very wide sizes the

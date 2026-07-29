@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import {
   AD_SLOTS,
   EXOCLICK_INS_CLASS,
+  MAX_INTERSTITIAL_COOLDOWN_MINUTES,
   NETWORK_SLOTS,
   isValidInsClass,
   isValidVerificationCode,
@@ -582,6 +583,31 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
             uses a different ExoClick account and its zone tag shows another{" "}
             <code className="text-ink-300">ins class=&quot;…&quot;</code>, paste that class here —
             a mismatch shows no ads and reports no error.
+          </span>
+        </label>
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Interstitial cooldown (minutes)
+          <input
+            type="number"
+            min={0}
+            max={MAX_INTERSTITIAL_COOLDOWN_MINUTES}
+            value={config.network.interstitialCooldownMinutes}
+            onChange={(e) =>
+              updateNetwork({
+                interstitialCooldownMinutes: Math.min(
+                  Math.max(Number.parseInt(e.target.value, 10) || 0, 0),
+                  MAX_INTERSTITIAL_COOLDOWN_MINUTES,
+                ),
+              })
+            }
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+          <span className="mt-1 block text-xs text-ink-400">
+            Applies to the video interstitial above. <code className="text-ink-300">0</code> shows it
+            on every video opened; <code className="text-ink-300">1</code> (the default) means at most
+            once a minute per visitor. Max {MAX_INTERSTITIAL_COOLDOWN_MINUTES} (24h). Stacks on top of
+            any cap set in the ExoClick zone itself.
           </span>
         </label>
 
