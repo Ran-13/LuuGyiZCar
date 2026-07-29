@@ -5,10 +5,17 @@ interface AdBannerProps {
   className?: string;
   /** Stick to the bottom of the viewport (outside scroll flow). */
   sticky?: boolean;
+  /** Load eagerly (above-the-fold banners). Default true. */
+  priority?: boolean;
 }
 
 /** Renders a GIF/image ad when the slot is enabled and has an image. */
-export default function AdBanner({ banner, className = "", sticky = false }: AdBannerProps) {
+export default function AdBanner({
+  banner,
+  className = "",
+  sticky = false,
+  priority = true,
+}: AdBannerProps) {
   if (!banner?.enabled || !banner.imageUrl) return null;
 
   const image = (
@@ -16,9 +23,11 @@ export default function AdBanner({ banner, className = "", sticky = false }: AdB
     <img
       src={banner.imageUrl}
       alt={banner.alt || "Advertisement"}
-      className="h-full w-full object-fill"
-      loading="lazy"
-      decoding="async"
+      className="w-full object-fill sm:max-h-28"
+      loading={priority ? "eager" : "lazy"}
+      decoding={priority ? "sync" : "async"}
+      // @ts-expect-error -- fetchPriority not yet in React img types
+      fetchPriority={priority ? "high" : "auto"}
     />
   );
 

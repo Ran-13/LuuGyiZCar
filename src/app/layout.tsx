@@ -39,8 +39,18 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const ads = await readAdsConfig();
 
+  // Collect all enabled banner image URLs for preloading in <head>
+  const bannerUrls = Object.values(ads.banners)
+    .filter((b) => b.enabled && b.imageUrl)
+    .map((b) => b.imageUrl);
+
   return (
     <html lang="en" className="h-full antialiased">
+      <head>
+        {bannerUrls.map((url) => (
+          <link key={url} rel="preload" href={url} as="image" fetchPriority="high" />
+        ))}
+      </head>
       <body className="flex min-h-full flex-col bg-ink-950">
         <Header siteName={ads.site.siteName} />
         <main className="w-full flex-1 px-3 py-5 sm:px-5 sm:py-7">

@@ -9,7 +9,7 @@ import { readAdsConfig } from "@/lib/ads";
 import { CATEGORIES } from "@/lib/categories";
 import { searchVideos } from "@/lib/eporner";
 
-export const revalidate = 60;
+export const revalidate = 10;
 
 /** Videos fetched per infinite-scroll batch. */
 const BATCH_SIZE = 24;
