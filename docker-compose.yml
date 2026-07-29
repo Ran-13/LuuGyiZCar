@@ -1,0 +1,48 @@
+# One codebase → many sites.
+# Each site = its own --env-file, project name (-p), port, data, and admin secrets.
+#
+# Local examples:
+#   docker compose --env-file sites/site1/.env -p luugyi-site1 up -d --build
+#   docker compose --env-file sites/site2/.env -p luugyi-site2 up -d --build
+#
+# Stop one site:
+#   docker compose --env-file sites/site1/.env -p luugyi-site1 down
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Baked into the client JS — must match ADMIN_PATH for that site
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_ADMIN_PATH: ${NEXT_PUBLIC_ADMIN_PATH:-admin}
+    image: luugyi-zcar:${COMPOSE_PROJECT_NAME:-web}
+    ports:
+      # Local: 3000 / 3001 …  Production: 127.0.0.1:8082:3000
+      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_PUBLIC_ADMIN_PATH: ${NEXT_PUBLIC_ADMIN_PATH:-admin}
+      ADMIN_PATH: ${ADMIN_PATH:-admin}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_SECRET: ${ADMIN_SECRET}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
+    volumes:
+      # Per-site ads.json + GIF uploads (never share these between domains)
+      - ${DATA_DIR:-./data}:/app/data
+      - ${UPLOADS_DIR:-./public/uploads}:/app/public/uploads
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s

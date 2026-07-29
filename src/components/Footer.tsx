@@ -1,7 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { isAdminUiPath } from "@/lib/admin-path";
 import { CATEGORIES } from "@/lib/categories";
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (isAdminUiPath(pathname)) return null;
+
   return (
     <footer className="mt-16 border-t border-ink-700 bg-ink-900">
       <div className="mx-auto max-w-[1600px] px-4 py-10">

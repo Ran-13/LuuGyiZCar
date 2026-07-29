@@ -4,6 +4,7 @@ import { Heart, History, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
+import { isAdminUiPath } from "@/lib/admin-path";
 import { CATEGORIES } from "@/lib/categories";
 import SearchBar from "./SearchBar";
 
@@ -15,6 +16,8 @@ const LIBRARY_LINKS = [
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  if (isAdminUiPath(pathname)) return null;
 
   const closeMenu = () => setMenuOpen(false);
 

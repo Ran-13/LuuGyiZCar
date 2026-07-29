@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { ADMIN_UI_PATH } from "@/lib/admin-path";
 import { absoluteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
@@ -7,7 +8,8 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // /api is machine-only; /search results are thin duplicate content.
-      disallow: ["/api/", "/search"],
+      // Secret admin UI must never be crawled.
+      disallow: ["/api/", "/search", "/admin", ADMIN_UI_PATH],
     },
     sitemap: absoluteUrl("/sitemap.xml"),
   };

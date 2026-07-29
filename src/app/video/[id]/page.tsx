@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import AdBanner from "@/components/AdBanner";
 import FavoriteButton from "@/components/FavoriteButton";
 import GridSkeleton from "@/components/GridSkeleton";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
 import WatchHistoryRecorder from "@/components/WatchHistoryRecorder";
+import { readAdsConfig } from "@/lib/ads";
 import {
   formatAdded,
   formatRating,
@@ -20,7 +22,7 @@ import {
 } from "@/lib/eporner";
 import { absoluteUrl } from "@/lib/site";
 
-export const revalidate = 900;
+export const revalidate = 60;
 
 /** Videos fetched per infinite-scroll batch in the related grid. */
 const RELATED_BATCH = 18;
@@ -79,7 +81,7 @@ async function RelatedSection({ query, currentId }: { query: string; currentId: 
 
 export default async function VideoPage({ params }: PageProps) {
   const { id } = await params;
-  const video = await getVideoById(id);
+  const [video, ads] = await Promise.all([getVideoById(id), readAdsConfig()]);
   if (!video) notFound();
 
   const tags = parseKeywords(video.keywords);
@@ -172,6 +174,8 @@ export default async function VideoPage({ params }: PageProps) {
             </div>
           </section>
         )}
+
+        <AdBanner banner={ads.banners["video-mid"]} className="mt-5" />
       </div>
 
       <section className="mt-12">

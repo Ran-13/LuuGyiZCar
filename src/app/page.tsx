@@ -1,11 +1,15 @@
 import Link from "next/link";
+import AdBanner from "@/components/AdBanner";
+import AnnouncementDialog from "@/components/AnnouncementDialog";
 import EmptyState from "@/components/EmptyState";
+import HomeAnnouncement from "@/components/HomeAnnouncement";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
+import { readAdsConfig } from "@/lib/ads";
 import { CATEGORIES } from "@/lib/categories";
 import { searchVideos } from "@/lib/eporner";
 
-export const revalidate = 900;
+export const revalidate = 60;
 
 /** Videos fetched per infinite-scroll batch. */
 const BATCH_SIZE = 24;
@@ -16,14 +20,21 @@ const FEED_QUERY = "";
 const FEED_ORDER = "top-weekly" as const;
 
 export default async function HomePage() {
-  const trending = await searchVideos({
-    query: FEED_QUERY,
-    perPage: BATCH_SIZE,
-    order: FEED_ORDER,
-  });
+  const [trending, ads] = await Promise.all([
+    searchVideos({
+      query: FEED_QUERY,
+      perPage: BATCH_SIZE,
+      order: FEED_ORDER,
+    }),
+    readAdsConfig(),
+  ]);
+
+  const dialogVersion = `${ads.updatedAt}:${ads.announcement.text.slice(0, 40)}`;
 
   return (
     <>
+      <AnnouncementDialog announcement={ads.announcement} version={dialogVersion} />
+
       {/* The header carries the same rail on lg+, so this is the mobile affordance. */}
       <nav
         aria-label="Browse categories"
@@ -39,6 +50,10 @@ export default async function HomePage() {
           </Link>
         ))}
       </nav>
+
+      <HomeAnnouncement announcement={ads.announcement} />
+
+      <AdBanner banner={ads.banners["home-top"]} className="mb-6" />
 
       <SectionHeading as="h1" title="Trending Now" subtitle="Most watched this week" />
 
@@ -57,6 +72,8 @@ export default async function HomePage() {
           priorityCount={6}
         />
       )}
+
+      <AdBanner banner={ads.banners["home-bottom"]} className="mt-8" />
     </>
   );
 }

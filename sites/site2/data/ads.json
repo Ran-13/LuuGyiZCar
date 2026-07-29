@@ -1,0 +1,34 @@
+{
+  "announcement": {
+    "enabled": true,
+    "showDialog": true,
+    "showInline": true,
+    "text": "Site 2 VIP announcement — edit me in this site's admin panel",
+    "contactLabel": "Contact admin",
+    "contactUrl": "https://t.me/VVIPMEMEBR",
+    "adsLabel": "ကြော်ငြာထည့်သွင်းလိုပါက admin 👉",
+    "adsContact": "@VVIPMEMEBR",
+    "adsContactUrl": "https://t.me/VVIPMEMEBR"
+  },
+  "banners": {
+    "home-top": {
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "alt": "Advertisement"
+    },
+    "home-bottom": {
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "alt": "Advertisement"
+    },
+    "video-mid": {
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "alt": "Advertisement"
+    }
+  },
+  "updatedAt": "2026-07-29T06:00:00.000Z"
+}

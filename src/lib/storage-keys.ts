@@ -13,6 +13,8 @@ export const STORAGE_KEYS = {
   favorites: "luugyi:favorites",
   history: "luugyi:history",
   recentSearches: "luugyi:recent-searches",
+  /** Stores the announcement version last dismissed in the home dialog. */
+  announcementDialogSeen: "luugyi:announcement-dialog-seen",
 } as const;
 
 export const MAX_HISTORY = 100;

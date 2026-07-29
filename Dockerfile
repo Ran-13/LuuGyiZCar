@@ -15,10 +15,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Baked into the client bundle at build time, so it must be present here and
-# not only at runtime.
+# Baked into the client bundle at build time — must match runtime ADMIN_PATH.
 ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_ADMIN_PATH=admin
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_ADMIN_PATH=$NEXT_PUBLIC_ADMIN_PATH
+ENV ADMIN_PATH=$NEXT_PUBLIC_ADMIN_PATH
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
@@ -38,6 +40,11 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+
+# Writable dirs for ad JSON + uploaded GIF banners (mount volumes over these).
+RUN mkdir -p /app/data /app/public/uploads/ads \
+  && chown -R nextjs:nodejs /app/data /app/public/uploads
 
 USER nextjs
 EXPOSE 3000

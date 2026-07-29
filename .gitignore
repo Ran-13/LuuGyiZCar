@@ -32,6 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!sites/**/.env.example
+
+# uploaded ad creatives (keep folder via .gitkeep)
+/public/uploads/ads/*
+!/public/uploads/ads/.gitkeep
+/sites/*/uploads/ads/*
+!/sites/*/uploads/ads/.gitkeep
+
+# per-site runtime secrets
+/sites/*/.env
 
 # vercel
 .vercel
