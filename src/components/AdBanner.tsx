@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { AdBannerConfig } from "@/lib/ads-types";
 
 interface AdBannerProps {
@@ -16,7 +19,9 @@ export default function AdBanner({
   sticky = false,
   priority = true,
 }: AdBannerProps) {
-  if (!banner?.enabled || !banner.imageUrl) return null;
+  const [broken, setBroken] = useState(false);
+
+  if (!banner?.enabled || !banner.imageUrl || broken) return null;
 
   const image = (
     // eslint-disable-next-line @next/next/no-img-element -- GIF ads + arbitrary upload URLs
@@ -27,6 +32,7 @@ export default function AdBanner({
       loading={priority ? "eager" : "lazy"}
       decoding={priority ? "sync" : "async"}
       fetchPriority={priority ? "high" : "auto"}
+      onError={() => setBroken(true)}
     />
   );
 
