@@ -47,6 +47,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className="h-full antialiased">
       <head>
+        {/* DNS prefetch + preconnect for video thumbnail CDN */}
+        <link rel="dns-prefetch" href="https://static-ca-cdn.eporner.com" />
+        <link rel="preconnect" href="https://static-ca-cdn.eporner.com" crossOrigin="anonymous" />
+        {/* Preload all enabled banner GIFs — browser fetches before body parse */}
         {bannerUrls.map((url) => (
           <link key={url} rel="preload" href={url} as="image" fetchPriority="high" />
         ))}
