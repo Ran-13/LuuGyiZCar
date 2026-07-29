@@ -119,7 +119,8 @@ NGINX_ENABLED="/etc/nginx/sites-enabled/luugyi-zcar"
 if [[ -d /etc/nginx/sites-available ]]; then
   echo
   echo "==> Installing nginx site (new file only)"
-  sed "s/YOUR-DOMAIN.com/${DOMAIN}/g" "$ROOT/deploy/nginx-luugyi-zcar.conf" > "$NGINX_AVAILABLE"
+  sed "s|YOUR-DOMAIN.com|${DOMAIN}|g; s|UPLOADS_ROOT|${ROOT}/sites/prod/uploads|g" \
+    "$ROOT/deploy/nginx-luugyi-zcar.conf" > "$NGINX_AVAILABLE"
   ln -sfn "$NGINX_AVAILABLE" "$NGINX_ENABLED"
   nginx -t
   systemctl reload nginx
