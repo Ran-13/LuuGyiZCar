@@ -63,7 +63,6 @@ export default function ExoClickInterstitial({ network }: { network: AdNetworkCo
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally re-arm on pathname/visit
   }, [pathname, visit, active.length, network.enabled]);
 
   if (active.length === 0) return null;

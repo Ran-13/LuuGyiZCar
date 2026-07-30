@@ -59,8 +59,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="dns-prefetch" href="https://static-ca-cdn.eporner.com" />
         <link rel="preconnect" href="https://static-ca-cdn.eporner.com" crossOrigin="anonymous" />
         {/* Preload all enabled banner GIFs — browser fetches before body parse */}
+        {/* Warmed, not prioritised. These GIFs are decorative and often large;
+            at fetchPriority="high" they competed with the first row of video
+            thumbnails for bandwidth and pushed back the LCP image. */}
         {bannerUrls.map((url) => (
-          <link key={url} rel="preload" href={url} as="image" fetchPriority="high" />
+          <link key={url} rel="preload" href={url} as="image" fetchPriority="low" />
         ))}
       </head>
       <body className="flex min-h-full flex-col bg-ink-950">
