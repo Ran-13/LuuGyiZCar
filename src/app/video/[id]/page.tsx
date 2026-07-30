@@ -128,11 +128,9 @@ export default async function VideoPage({ params }: PageProps) {
       <WatchHistoryRecorder video={video} />
 
       <div>
-        {/* Full width, but never taller than the viewport — at very wide sizes the
-            16:9 box would otherwise push the title and tags off screen. */}
-        <div className="relative mx-auto aspect-video w-full max-w-[calc(82vh*16/9)] overflow-hidden rounded-lg bg-ink-900">
-          <VideoEmbed src={video.embed} title={video.title} />
-        </div>
+        {/* VideoEmbed owns the aspect box (full width, capped at 82vh tall) so its
+            reload controls can sit below the frame rather than over it. */}
+        <VideoEmbed src={video.embed} title={video.title} poster={video.default_thumb?.src} />
 
         <h1 className="mt-4 text-lg leading-snug font-bold text-ink-100 sm:text-xl">
           {video.title}
