@@ -26,7 +26,7 @@ const LOAD_TIMEOUT_MS = 9000;
  *   `onError`, so the parent page genuinely cannot detect the white-frame case.
  *   Privacy blocking (Safari ITP, Brave shields, ad blockers) causes it and is
  *   outside this page's control, so the honest fix is to let the viewer reload
- *   the player or open it directly rather than pretend we can auto-detect it.
+ *   the player rather than pretend we can auto-detect it.
  */
 export default function VideoEmbed({ src, title, poster }: Props) {
   const [attempt, setAttempt] = useState(0);
@@ -105,14 +105,6 @@ export default function VideoEmbed({ src, title, poster }: Props) {
             <RotateCcw size={13} aria-hidden />
             Reload player
           </button>
-          <a
-            href={src}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-ink-700 px-2.5 py-1.5 text-xs font-semibold text-ink-300 transition-colors hover:border-brand-500 hover:text-brand-500"
-          >
-            Open directly
-          </a>
         </div>
       )}
     </>
