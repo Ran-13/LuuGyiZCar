@@ -226,6 +226,82 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
 
       <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-ink-100">Myanmar VPN wall</h2>
+            <p className="mt-1 text-xs text-ink-400">
+              When on, visitors whose IP is in a blocked country (default MM) only see a VPN
+              required page. Foreign VPN exits are allowed. Admin stays reachable without VPN.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-ink-300">
+            <input
+              type="checkbox"
+              checked={config.vpnWall.enabled}
+              onChange={(e) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  vpnWall: { ...prev.vpnWall, enabled: e.target.checked },
+                }))
+              }
+            />
+            Enabled
+          </label>
+        </div>
+
+        <label className="mt-4 block text-sm text-ink-300">
+          Blocked country codes{" "}
+          <span className="text-ink-400">(comma-separated ISO, e.g. MM)</span>
+          <input
+            value={config.vpnWall.blockedCountries.join(", ")}
+            onChange={(e) =>
+              setConfig((prev) => ({
+                ...prev,
+                vpnWall: {
+                  ...prev.vpnWall,
+                  blockedCountries: e.target.value
+                    .split(/[\s,]+/)
+                    .map((c) => c.trim().toUpperCase())
+                    .filter(Boolean),
+                },
+              }))
+            }
+            placeholder="MM"
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+        </label>
+
+        <label className="mt-3 block text-sm text-ink-300">
+          Wall title
+          <input
+            value={config.vpnWall.title}
+            onChange={(e) =>
+              setConfig((prev) => ({
+                ...prev,
+                vpnWall: { ...prev.vpnWall, title: e.target.value },
+              }))
+            }
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+        </label>
+
+        <label className="mt-3 block text-sm text-ink-300">
+          Wall message
+          <textarea
+            value={config.vpnWall.message}
+            onChange={(e) =>
+              setConfig((prev) => ({
+                ...prev,
+                vpnWall: { ...prev.vpnWall, message: e.target.value },
+              }))
+            }
+            rows={5}
+            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
+          />
+        </label>
+      </section>
+
+      <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-ink-100">Home announcement</h2>
           <div className="flex flex-wrap items-center gap-4 text-sm text-ink-300">
             <label className="flex items-center gap-2">

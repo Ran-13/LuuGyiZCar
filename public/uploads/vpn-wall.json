@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "blockedCountries": ["MM"],
+  "title": "VPN required",
+  "message": "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ"
+}

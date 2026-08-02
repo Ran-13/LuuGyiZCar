@@ -25,6 +25,7 @@ import {
   type NetworkSlotId,
   type NetworkZoneConfig,
   type SiteConfig,
+  type VpnWallConfig,
 } from "@/lib/ads-types";
 
 export type {
@@ -37,6 +38,7 @@ export type {
   NetworkSlotId,
   NetworkZoneConfig,
   SiteConfig,
+  VpnWallConfig,
 };
 export {
   AD_SLOTS,
@@ -60,6 +62,47 @@ const DATA_FILE = path.join(DATA_DIR, "ads.json");
 
 export const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "ads");
 export const UPLOAD_PUBLIC_PREFIX = "/uploads/ads";
+/** Writable volume path — Edge proxy fetches this via /uploads/vpn-wall.json. */
+const VPN_WALL_PUBLIC_FILE = path.join(process.cwd(), "public", "uploads", "vpn-wall.json");
+
+function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfig {
+  const defaults = DEFAULT_ADS_CONFIG.vpnWall;
+  const countries = Array.isArray(raw?.blockedCountries)
+    ? raw.blockedCountries
+        .map((c) => (typeof c === "string" ? c.trim().toUpperCase() : ""))
+        .filter((c) => /^[A-Z]{2}$/.test(c))
+    : [];
+  return {
+    enabled: Boolean(raw?.enabled),
+    blockedCountries: countries.length > 0 ? countries : [...defaults.blockedCountries],
+    title:
+      typeof raw?.title === "string" && raw.title.trim()
+        ? raw.title.trim()
+        : defaults.title,
+    message:
+      typeof raw?.message === "string" && raw.message.trim()
+        ? raw.message
+        : defaults.message,
+  };
+}
+
+async function writeVpnWallPublicSnapshot(vpnWall: VpnWallConfig): Promise<void> {
+  await mkdir(path.dirname(VPN_WALL_PUBLIC_FILE), { recursive: true });
+  await writeFile(
+    VPN_WALL_PUBLIC_FILE,
+    JSON.stringify(
+      {
+        enabled: vpnWall.enabled,
+        blockedCountries: vpnWall.blockedCountries,
+        title: vpnWall.title,
+        message: vpnWall.message,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
 
 function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConfig {
   return {
@@ -196,6 +239,7 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
     },
     banners,
     network: normalizeNetwork(raw?.network),
+    vpnWall: normalizeVpnWall(raw?.vpnWall),
     updatedAt:
       typeof raw?.updatedAt === "string" ? raw.updatedAt : DEFAULT_ADS_CONFIG.updatedAt,
   };
@@ -224,6 +268,7 @@ export async function writeAdsConfig(config: AdsConfig): Promise<AdsConfig> {
     updatedAt: new Date().toISOString(),
   });
   await writeFile(DATA_FILE, JSON.stringify(next, null, 2), "utf8");
+  await writeVpnWallPublicSnapshot(next.vpnWall);
   return next;
 }
 

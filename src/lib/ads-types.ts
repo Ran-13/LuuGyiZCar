@@ -213,12 +213,25 @@ export interface SiteConfig {
   siteDescription: string;
 }
 
+/**
+ * Myanmar (or other) country wall — visitors whose IP geolocates to a blocked
+ * country must use a foreign VPN exit before the site loads.
+ */
+export interface VpnWallConfig {
+  enabled: boolean;
+  /** ISO 3166-1 alpha-2 codes (e.g. MM). Empty falls back to ["MM"]. */
+  blockedCountries: string[];
+  title: string;
+  message: string;
+}
+
 export interface AdsConfig {
   site: SiteConfig;
   announcement: AnnouncementConfig;
   banners: Record<AdSlotId, AdBannerConfig>;
   /** ExoClick layer — independent of `banners`. */
   network: AdNetworkConfig;
+  vpnWall: VpnWallConfig;
   updatedAt: string;
 }
 
@@ -286,6 +299,12 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     popunderEnabled: false,
     verificationCode: "",
     insClass: "",
+  },
+  vpnWall: {
+    enabled: false,
+    blockedCountries: ["MM"],
+    title: "VPN required",
+    message: "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ",
   },
   updatedAt: new Date(0).toISOString(),
 };

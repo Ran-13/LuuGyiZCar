@@ -138,6 +138,16 @@ export async function PUT(request: Request) {
     },
     banners,
     network,
+    vpnWall: {
+      enabled: Boolean(body.vpnWall?.enabled ?? current.vpnWall.enabled),
+      blockedCountries: Array.isArray(body.vpnWall?.blockedCountries)
+        ? body.vpnWall.blockedCountries
+            .map((c) => (typeof c === "string" ? c.trim().toUpperCase() : ""))
+            .filter((c) => /^[A-Z]{2}$/.test(c))
+        : current.vpnWall.blockedCountries,
+      title: String(body.vpnWall?.title ?? current.vpnWall.title),
+      message: String(body.vpnWall?.message ?? current.vpnWall.message),
+    },
     updatedAt: new Date().toISOString(),
   });
 

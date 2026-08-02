@@ -89,7 +89,7 @@ CACHE_BLOCK = """
         proxy_cache_background_update on;
         proxy_cache_lock on;
         proxy_cache_lock_timeout 5s;
-        proxy_cache_key "$scheme$host$request_uri";
+        proxy_cache_key "$scheme$host$request_uri$remote_addr";
         add_header X-Cache-Status $upstream_cache_status;"""
 
 # Find proxy_read_timeout in the main location / block
@@ -144,6 +144,16 @@ if "proxy_hide_header Pragma;" not in text and "proxy_hide_header Cache-Control;
         1,
     )
     changes.append("hide upstream Pragma")
+
+# Per-IP cache key so a Myanmar VPN wall cannot be bypassed via a shared HTML cache.
+new, n = re.subn(
+    r'proxy_cache_key\s+"\$scheme\$host\$request_uri";',
+    'proxy_cache_key "$scheme$host$request_uri$remote_addr";',
+    text,
+)
+if n:
+    text = new
+    changes.append("proxy_cache_key includes remote_addr")
 
 # A vhost can have proxy_cache (so step 3c is skipped) yet no Cache-Control
 # override at all. Next.js' own header then reaches the browser:

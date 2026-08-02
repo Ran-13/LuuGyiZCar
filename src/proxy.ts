@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { normalizeAdminSlug } from "@/lib/admin-path";
+import {
+  getRequestIp,
+  isBlockedCountry,
+  lookupCountryCode,
+  readVpnWallPublicConfig,
+} from "@/lib/vpn-wall";
 
 function adminSlug(): string {
   const raw =
@@ -27,9 +33,6 @@ function withAdminHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline'",
       "connect-src 'self'",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
     ].join("; "),
   );
   return response;
@@ -44,11 +47,45 @@ function stripSecretPrefix(pathname: string, prefix: string): string | null {
   return null;
 }
 
+function isVpnWallExempt(pathname: string, slug: string): boolean {
+  if (pathname === "/vpn-required" || pathname.startsWith("/vpn-required/")) return true;
+  // Admin UI/API must stay reachable from MM so you can turn the wall off.
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
+  if (pathname === "/api/admin" || pathname.startsWith("/api/admin/")) return true;
+  if (slug !== "admin") {
+    const ui = stripSecretPrefix(pathname, `/${slug}`);
+    const api = stripSecretPrefix(pathname, `/api/${slug}`);
+    if (ui !== null || api !== null) return true;
+  }
+  return false;
+}
+
+async function enforceVpnWall(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  if (isVpnWallExempt(pathname, adminSlug())) return null;
+
+  const origin = request.nextUrl.origin;
+  const wall = await readVpnWallPublicConfig(origin);
+  if (!wall.enabled) return null;
+
+  const ip = getRequestIp(request.headers);
+  const country = await lookupCountryCode(ip);
+  // Fail-open when geo is unknown (API down / local / no proxy headers).
+  if (!country || !isBlockedCountry(country, wall.blockedCountries)) return null;
+
+  const url = request.nextUrl.clone();
+  url.pathname = "/vpn-required";
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
 /**
  * Hides `/admin` behind a secret slug from ADMIN_PATH.
  * Example: ADMIN_PATH=panel-k9x2m → public URL is /panel-k9x2m (rewrites to /admin).
+ *
+ * Also enforces the Myanmar VPN wall when enabled in admin.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const slug = adminSlug();
   const { pathname } = request.nextUrl;
 
@@ -79,6 +116,9 @@ export function proxy(request: NextRequest) {
   if (isDefaultUi || isDefaultApi || isSecretUi || isSecretApi) {
     return withAdminHeaders(NextResponse.next());
   }
+
+  const wallRedirect = await enforceVpnWall(request);
+  if (wallRedirect) return wallRedirect;
 
   return NextResponse.next();
 }
