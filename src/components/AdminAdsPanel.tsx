@@ -646,9 +646,10 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
           </label>
           <p className="text-xs text-ink-400">
             Fires when a visitor clicks a video card (<code className="text-ink-300">exo-int-trigger</code>
-            ). Create a Popunder zone in ExoClick, paste its Zone ID here, turn this on, and set
-            capping there (e.g. 1×/hour) so it doesn&apos;t stack too hard with interstitials.
-            Needs the network master switch on.
+            ). Create a Popunder zone in ExoClick, paste only the Zone ID here (e.g.{" "}
+            <code className="text-ink-300">5992792</code>) — do not paste the full script. Turn this on,
+            keep the network master switch on, and set capping in ExoClick (e.g. 1×/hour) so it
+            doesn&apos;t stack too hard with interstitials.
           </p>
         </div>
       </section>
