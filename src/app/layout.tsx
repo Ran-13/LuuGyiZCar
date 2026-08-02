@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import ExoClickInPagePush from "@/components/ExoClickInPagePush";
 import ExoClickPopunder from "@/components/ExoClickPopunder";
 import ExoClickProvider from "@/components/ExoClickProvider";
+import ExoClickStickyBanner from "@/components/ExoClickStickyBanner";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { EXOCLICK_VERIFICATION_META, readAdsConfig } from "@/lib/ads";
@@ -75,6 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </main>
         <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
         <ExoClickInPagePush network={ads.network} />
+        <ExoClickStickyBanner network={ads.network} />
         <ExoClickPopunder network={ads.network} />
         <ExoClickProvider network={ads.network} />
       </body>

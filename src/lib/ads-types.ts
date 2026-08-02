@@ -57,6 +57,12 @@ export const NETWORK_SLOTS = [
     description:
       "In-Page Push (native push look). Position is set in ExoClick (e.g. top-right). Loads on every page.",
   },
+  {
+    id: "net-sticky-banner",
+    label: "ExoClick — sticky banner",
+    description:
+      "Sticky Banner (usually mobile bottom bar). Create a Sticky Banner zone in ExoClick. Loads on every page.",
+  },
 ] as const;
 
 /** Interstitial zones live on listing pages, not the video page (see below). */
@@ -67,6 +73,9 @@ export const INTERSTITIAL_SLOTS = [
 
 /** Floating formats that should load site-wide from the root layout. */
 export const SITEWIDE_NETWORK_SLOTS = ["net-in-page-push"] as const;
+
+/** Sticky banner zones — fixed bottom bar, site-wide from the root layout. */
+export const STICKY_BANNER_SLOTS = ["net-sticky-banner"] as const;
 
 export type NetworkSlotId = (typeof NETWORK_SLOTS)[number]["id"];
 
@@ -264,6 +273,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-interstitial-desktop": { enabled: false, zoneId: "", insClass: "" },
       "net-interstitial-mobile": { enabled: false, zoneId: "", insClass: "" },
       "net-in-page-push": { enabled: false, zoneId: "", insClass: "" },
+      "net-sticky-banner": { enabled: false, zoneId: "", insClass: "" },
     },
     popunderZoneId: "",
     popunderEnabled: false,
