@@ -613,7 +613,10 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
           <code className="text-ink-300">eas6a97888e2</code> — they are not interchangeable.
           In-Page Push loads on every page; set its corner position in ExoClick (Horizontal /
           Vertical Position), not here. Sticky Banner also loads on every page (fixed bottom) —
-          create a Sticky Banner zone type in ExoClick, not a normal Banner.
+          create a Sticky Banner zone type in ExoClick, not a normal Banner. Native /
+          Recommendation sits under “Related Videos” on the video page — use ExoClick&apos;s
+          Native or Recommendation Widget zone type so it looks like more video thumbs, not a
+          big banner.
           Interstitials fire when a visitor clicks a video from home / category / search.
           The app re-arms the tag on every listing visit. If it still only shows{" "}
           <strong className="text-ink-300">once per day</strong>, open the zone in ExoClick →{" "}

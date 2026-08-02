@@ -42,6 +42,12 @@ export const NETWORK_SLOTS = [
     description: "Below the player meta row",
   },
   {
+    id: "net-video-native",
+    label: "ExoClick — related native / recommendation",
+    description:
+      "Native / Recommendation Widget on the video page — sits under “Related Videos”. Create a Native or Recommendation zone in ExoClick.",
+  },
+  {
     id: "net-interstitial-desktop",
     label: "ExoClick — interstitial (desktop)",
     description: "Desktop Fullpage Interstitial zone. Fires when a visitor clicks a video.",
@@ -270,6 +276,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-home-top": { enabled: false, zoneId: "", insClass: "" },
       "net-home-bottom": { enabled: false, zoneId: "", insClass: "" },
       "net-video-below": { enabled: false, zoneId: "", insClass: "" },
+      "net-video-native": { enabled: false, zoneId: "", insClass: "" },
       "net-interstitial-desktop": { enabled: false, zoneId: "", insClass: "" },
       "net-interstitial-mobile": { enabled: false, zoneId: "", insClass: "" },
       "net-in-page-push": { enabled: false, zoneId: "", insClass: "" },

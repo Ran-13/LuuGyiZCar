@@ -180,6 +180,8 @@ export default async function VideoPage({ params }: PageProps) {
       <section className="mt-12">
         {/* Heading renders immediately; only the grid waits on the second fetch. */}
         <SectionHeading title="Related Videos" subtitle={`More in “${relatedQuery}”`} />
+        {/* Native / recommendation widget — blends under the related heading, not a tall banner. */}
+        <ExoClickZone network={ads.network} slot="net-video-native" className="mb-5 w-full" />
         <Suspense fallback={<GridSkeleton count={RELATED_BATCH} />}>
           <RelatedSection query={relatedQuery} currentId={video.id} />
         </Suspense>
