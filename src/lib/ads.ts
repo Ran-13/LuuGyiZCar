@@ -62,8 +62,9 @@ const DATA_FILE = path.join(DATA_DIR, "ads.json");
 
 export const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "ads");
 export const UPLOAD_PUBLIC_PREFIX = "/uploads/ads";
-/** Writable volume path — Edge proxy fetches this via /uploads/vpn-wall.json. */
-const VPN_WALL_PUBLIC_FILE = path.join(process.cwd(), "public", "uploads", "vpn-wall.json");
+/** Writable volume paths — proxy reads these from disk (Node runtime). */
+const VPN_WALL_UPLOADS_FILE = path.join(process.cwd(), "public", "uploads", "vpn-wall.json");
+const VPN_WALL_DATA_FILE = path.join(DATA_DIR, "vpn-wall.json");
 
 function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfig {
   const defaults = DEFAULT_ADS_CONFIG.vpnWall;
@@ -87,21 +88,20 @@ function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfi
 }
 
 async function writeVpnWallPublicSnapshot(vpnWall: VpnWallConfig): Promise<void> {
-  await mkdir(path.dirname(VPN_WALL_PUBLIC_FILE), { recursive: true });
-  await writeFile(
-    VPN_WALL_PUBLIC_FILE,
-    JSON.stringify(
-      {
-        enabled: vpnWall.enabled,
-        blockedCountries: vpnWall.blockedCountries,
-        title: vpnWall.title,
-        message: vpnWall.message,
-      },
-      null,
-      2,
-    ),
-    "utf8",
+  const payload = JSON.stringify(
+    {
+      enabled: vpnWall.enabled,
+      blockedCountries: vpnWall.blockedCountries,
+      title: vpnWall.title,
+      message: vpnWall.message,
+    },
+    null,
+    2,
   );
+  await mkdir(path.dirname(VPN_WALL_UPLOADS_FILE), { recursive: true });
+  await mkdir(DATA_DIR, { recursive: true });
+  await writeFile(VPN_WALL_UPLOADS_FILE, payload, "utf8");
+  await writeFile(VPN_WALL_DATA_FILE, payload, "utf8");
 }
 
 function normalizeBanner(raw: Partial<AdBannerConfig> | undefined): AdBannerConfig {

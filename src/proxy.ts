@@ -65,7 +65,7 @@ async function enforceVpnWall(request: NextRequest): Promise<NextResponse | null
   if (isVpnWallExempt(pathname, adminSlug())) return null;
 
   const origin = request.nextUrl.origin;
-  const wall = await readVpnWallPublicConfig(origin);
+  const wall = await readVpnWallPublicConfig();
   if (!wall.enabled) return null;
 
   const ip = getRequestIp(request.headers);

@@ -13,6 +13,7 @@ import {
   writeAdsConfig,
 } from "@/lib/ads";
 import { requireAdminApi } from "@/lib/admin-guard";
+import { invalidateVpnWallConfigCache } from "@/lib/vpn-wall";
 
 export async function GET(request: Request) {
   const gate = await requireAdminApi(request);
@@ -158,6 +159,8 @@ export async function PUT(request: Request) {
   revalidatePath("/search");
   revalidatePath("/favorites");
   revalidatePath("/history");
+
+  invalidateVpnWallConfigCache();
 
   return NextResponse.json(saved, {
     headers: { "Cache-Control": "no-store" },
