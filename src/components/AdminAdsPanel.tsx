@@ -620,20 +620,37 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
           click, or 1× per 5–15 minutes). Server-side capping cannot be overridden from this site.
         </p>
 
-        <label className="mt-4 block text-sm text-ink-300">
-          Popunder Zone ID (stored only)
-          <input
-            value={config.network.popunderZoneId}
-            inputMode="numeric"
-            onChange={(e) => updateNetwork({ popunderZoneId: e.target.value.trim() })}
-            placeholder="Leave empty"
-            className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
-          />
-          <span className="mt-1 block text-xs text-ink-400">
-            Saved for later — no popunder is injected. It earns the most on your traffic but costs
-            the most in return visitors, so enabling it is a deliberate choice.
-          </span>
-        </label>
+        <div className="mt-4 space-y-3 rounded-md border border-ink-800 bg-ink-950/50 p-3">
+          <label className="flex items-center gap-2 text-sm text-ink-200">
+            <input
+              type="checkbox"
+              checked={config.network.popunderEnabled}
+              onChange={(e) => updateNetwork({ popunderEnabled: e.target.checked })}
+              className="rounded border-ink-600"
+            />
+            Enable Popunder
+          </label>
+          <label className="block text-sm text-ink-300">
+            Popunder Zone ID
+            <input
+              value={config.network.popunderZoneId}
+              inputMode="numeric"
+              onChange={(e) => updateNetwork({ popunderZoneId: e.target.value.trim() })}
+              placeholder="Digits from ExoClick Popunder zone"
+              className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
+                config.network.popunderEnabled && !config.network.popunderZoneId
+                  ? "border-amber-500"
+                  : "border-ink-700"
+              }`}
+            />
+          </label>
+          <p className="text-xs text-ink-400">
+            Fires when a visitor clicks a video card (<code className="text-ink-300">exo-int-trigger</code>
+            ). Create a Popunder zone in ExoClick, paste its Zone ID here, turn this on, and set
+            capping there (e.g. 1×/hour) so it doesn&apos;t stack too hard with interstitials.
+            Needs the network master switch on.
+          </p>
+        </div>
       </section>
 
       <div className="flex flex-wrap items-center gap-3 pb-10">

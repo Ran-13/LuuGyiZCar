@@ -92,6 +92,7 @@ export async function PUT(request: Request) {
     network.enabled = Boolean(body.network.enabled);
     network.zones = zones;
     network.popunderZoneId = isValidZoneId(popunder) ? popunder : "";
+    network.popunderEnabled = Boolean(body.network.popunderEnabled);
     network.verificationCode = isValidVerificationCode(verification) ? verification : "";
     // Empty means "use the platform default", so it must survive validation.
     network.insClass = insClass === "" || isValidInsClass(insClass) ? insClass : "";

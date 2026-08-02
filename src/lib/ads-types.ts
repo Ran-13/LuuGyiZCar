@@ -88,8 +88,13 @@ export interface AdNetworkConfig {
   /** Master switch. Off means ad-provider.js is never even requested. */
   enabled: boolean;
   zones: Record<NetworkSlotId, NetworkZoneConfig>;
-  /** Stored for later; no popunder script is injected by this app. */
+  /**
+   * ExoClick Popunder zone id (digits). Injected via popunder1000.js when
+   * `popunderEnabled` is on and the network master switch is on.
+   */
   popunderZoneId: string;
+  /** Deliberate opt-in — popunders earn well but are aggressive. */
+  popunderEnabled: boolean;
   /**
    * ExoClick site-verification code — the `content` value of their meta tag.
    *
@@ -261,6 +266,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-in-page-push": { enabled: false, zoneId: "", insClass: "" },
     },
     popunderZoneId: "",
+    popunderEnabled: false,
     verificationCode: "",
     insClass: "",
   },

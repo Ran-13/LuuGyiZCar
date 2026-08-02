@@ -96,6 +96,7 @@ function normalizeNetwork(raw: Partial<AdNetworkConfig> | undefined): AdNetworkC
     enabled: Boolean(raw?.enabled),
     zones,
     popunderZoneId: isValidZoneId(popunder) ? popunder : "",
+    popunderEnabled: Boolean(raw?.popunderEnabled),
     verificationCode: isValidVerificationCode(verification) ? verification : "",
     // Empty is meaningful: the component falls back to the platform default.
     insClass: isValidInsClass(insClass) ? insClass : "",

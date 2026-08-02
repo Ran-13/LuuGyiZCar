@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import ExoClickInPagePush from "@/components/ExoClickInPagePush";
+import ExoClickPopunder from "@/components/ExoClickPopunder";
 import ExoClickProvider from "@/components/ExoClickProvider";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </main>
         <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
         <ExoClickInPagePush network={ads.network} />
+        <ExoClickPopunder network={ads.network} />
         <ExoClickProvider network={ads.network} />
       </body>
     </html>
