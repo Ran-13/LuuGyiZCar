@@ -51,6 +51,12 @@ export const NETWORK_SLOTS = [
     label: "ExoClick — interstitial (mobile)",
     description: "Mobile Fullpage Interstitial zone — a separate zone type in ExoClick.",
   },
+  {
+    id: "net-in-page-push",
+    label: "ExoClick — in-page push",
+    description:
+      "In-Page Push (native push look). Position is set in ExoClick (e.g. top-right). Loads on every page.",
+  },
 ] as const;
 
 /** Interstitial zones live on listing pages, not the video page (see below). */
@@ -58,6 +64,9 @@ export const INTERSTITIAL_SLOTS = [
   "net-interstitial-desktop",
   "net-interstitial-mobile",
 ] as const;
+
+/** Floating formats that should load site-wide from the root layout. */
+export const SITEWIDE_NETWORK_SLOTS = ["net-in-page-push"] as const;
 
 export type NetworkSlotId = (typeof NETWORK_SLOTS)[number]["id"];
 
@@ -249,6 +258,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-video-below": { enabled: false, zoneId: "", insClass: "" },
       "net-interstitial-desktop": { enabled: false, zoneId: "", insClass: "" },
       "net-interstitial-mobile": { enabled: false, zoneId: "", insClass: "" },
+      "net-in-page-push": { enabled: false, zoneId: "", insClass: "" },
     },
     popunderZoneId: "",
     verificationCode: "",
