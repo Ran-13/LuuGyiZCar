@@ -1,7 +1,10 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { AdBannerConfig } from "@/lib/ads-types";
+import { isAdminUiPath } from "@/lib/admin-path";
 
 interface AdBannerProps {
   banner: AdBannerConfig | null | undefined;
@@ -21,13 +24,8 @@ const RETRY_DELAYS_MS = [500, 1500, 4000];
 /**
  * Renders a GIF/image ad when the slot is enabled and has an image.
  *
- * Retries on failure rather than hiding permanently. A single transient miss —
- * a dropped request on a slow mobile connection, a CDN hiccup — used to blank
- * the slot for the whole page view, which looked like ads "disappearing" and
- * then coming back on navigation (a remount reset the state).
- *
- * Stays hidden until an image actually decodes, so a failing slot never shows
- * Safari's broken-image icon or leaves an empty reserved gap.
+ * Sticky mode portals to document.body with position:fixed so the bar stays
+ * above the scroll on every page (home + video details), never in the flow.
  */
 export default function AdBanner({
   banner,
@@ -35,12 +33,19 @@ export default function AdBanner({
   sticky = false,
   priority = true,
 }: AdBannerProps) {
+  const pathname = usePathname();
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const [attempt, setAttempt] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   const imageUrl = banner?.imageUrl ?? "";
+  const hideOnAdmin = sticky && isAdminUiPath(pathname);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleFailure = () => {
     const next = attempt + 1;
@@ -48,8 +53,6 @@ export default function AdBanner({
       setStatus("failed");
       return;
     }
-    // setState inside a timer callback, not in an effect body — the pattern the
-    // set-state-in-effect rule permits.
     retryTimer.current = setTimeout(
       () => {
         setStatus("loading");
@@ -59,22 +62,10 @@ export default function AdBanner({
     );
   };
 
-  /**
-   * Reconcile with the DOM after mount.
-   *
-   * On a server-rendered page the browser starts (and often finishes) this
-   * request while parsing the HTML, before hydration attaches React's onLoad /
-   * onError. Those events then never fire, `status` stays "loading" forever and
-   * the banner is hidden permanently — which is what made ads vanish on refresh
-   * yet reappear on client-side navigation, where React creates the element and
-   * does observe the events. Reading `complete`/`naturalWidth` recovers the
-   * outcome React missed.
-   */
   useEffect(() => {
     const img = imgRef.current;
     if (!img) return;
 
-    // Deferred so the setState happens in a callback, not the effect body.
     const frame = requestAnimationFrame(() => {
       if (!img.complete) return;
       if (img.naturalWidth > 0) setStatus("ready");
@@ -82,8 +73,6 @@ export default function AdBanner({
     });
 
     return () => cancelAnimationFrame(frame);
-    // handleFailure is recreated each render but only reads `attempt`, which is
-    // already a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
@@ -94,20 +83,26 @@ export default function AdBanner({
     [],
   );
 
-  if (!banner?.enabled || !imageUrl || status === "failed") return null;
+  // Keep content clear of the fixed bar sitewide.
+  useEffect(() => {
+    if (!sticky || !mounted || hideOnAdmin || !banner?.enabled || !imageUrl || status !== "ready") {
+      return;
+    }
+    const prev = document.body.style.paddingBottom;
+    document.body.style.paddingBottom = "5rem";
+    return () => {
+      document.body.style.paddingBottom = prev;
+    };
+  }, [sticky, mounted, hideOnAdmin, banner?.enabled, imageUrl, status]);
 
-  // Only retries get a cache-buster, so the first request can still be served
-  // from the browser or nginx cache.
+  if (!banner?.enabled || !imageUrl || status === "failed" || hideOnAdmin) return null;
+
   const src = attempt === 0 ? imageUrl : `${imageUrl}${imageUrl.includes("?") ? "&" : "?"}r=${attempt}`;
-
-  const stickyClasses = sticky ? "fixed bottom-0 left-0 right-0 z-50" : "";
-  // Kept in the DOM while loading so the request runs, but taking no layout space.
   const hideShell = status !== "ready";
 
   const image = (
     // eslint-disable-next-line @next/next/no-img-element -- GIF ads + arbitrary upload URLs
     <img
-      // Remounts the element on retry, which is what forces a fresh request.
       key={attempt}
       ref={imgRef}
       src={src}
@@ -121,26 +116,51 @@ export default function AdBanner({
     />
   );
 
+  const inner = banner.linkUrl ? (
+    <a
+      href={banner.linkUrl}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      className="block h-full transition-opacity hover:opacity-90"
+    >
+      {image}
+    </a>
+  ) : (
+    <div className="h-full">{image}</div>
+  );
+
+  if (sticky) {
+    if (!mounted) return null;
+    const shell = (
+      <aside
+        aria-label="Advertisement"
+        aria-hidden={hideShell}
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+        }}
+        className={`overflow-hidden ${className} ${
+          hideShell ? "pointer-events-none h-0 opacity-0" : ""
+        }`}
+      >
+        {inner}
+      </aside>
+    );
+    return createPortal(shell, document.body);
+  }
+
   return (
     <aside
       aria-label="Advertisement"
       aria-hidden={hideShell}
-      className={`overflow-hidden ${stickyClasses} ${className} ${
+      className={`overflow-hidden ${className} ${
         hideShell ? "pointer-events-none absolute h-0 w-0 opacity-0" : ""
       }`}
     >
-      {banner.linkUrl ? (
-        <a
-          href={banner.linkUrl}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          className="block h-full transition-opacity hover:opacity-90"
-        >
-          {image}
-        </a>
-      ) : (
-        <div className="h-full">{image}</div>
-      )}
+      {inner}
     </aside>
   );
 }

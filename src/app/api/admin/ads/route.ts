@@ -6,6 +6,7 @@ import {
   isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
+  isValidGaMeasurementId,
   type AdsConfig,
   type AdSlotId,
   type AnnouncementDialogItem,
@@ -149,6 +150,17 @@ export async function PUT(request: Request) {
       title: String(body.vpnWall?.title ?? current.vpnWall.title),
       message: String(body.vpnWall?.message ?? current.vpnWall.message),
     },
+    analytics: (() => {
+      const id =
+        typeof body.analytics?.measurementId === "string"
+          ? body.analytics.measurementId.trim()
+          : current.analytics.measurementId;
+      const measurementId = isValidGaMeasurementId(id) ? id : "";
+      return {
+        enabled: Boolean(body.analytics?.enabled ?? current.analytics.enabled) && Boolean(measurementId),
+        measurementId,
+      };
+    })(),
     updatedAt: new Date().toISOString(),
   });
 

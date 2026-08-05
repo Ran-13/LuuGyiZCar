@@ -10,16 +10,20 @@ import {
   EXOCLICK_INS_CLASS,
   SITEWIDE_NETWORK_SLOTS,
   STICKY_BANNER_SLOTS,
+  STICKY_BOTTOM_SLOTS,
+  STICKY_TOP_SLOTS,
   isNetworkSlotId,
   isSlotId,
   isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
+  isValidGaMeasurementId,
   resolveInsClass,
   type AdBannerConfig,
   type AdNetworkConfig,
   type AdsConfig,
   type AdSlotId,
+  type AnalyticsConfig,
   type AnnouncementConfig,
   type AnnouncementDialogItem,
   type NetworkSlotId,
@@ -33,6 +37,7 @@ export type {
   AdNetworkConfig,
   AdsConfig,
   AdSlotId,
+  AnalyticsConfig,
   AnnouncementConfig,
   AnnouncementDialogItem,
   NetworkSlotId,
@@ -49,11 +54,14 @@ export {
   NETWORK_SLOTS,
   SITEWIDE_NETWORK_SLOTS,
   STICKY_BANNER_SLOTS,
+  STICKY_BOTTOM_SLOTS,
+  STICKY_TOP_SLOTS,
   isNetworkSlotId,
   isSlotId,
   isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
+  isValidGaMeasurementId,
   resolveInsClass,
 };
 
@@ -84,6 +92,16 @@ function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfi
       typeof raw?.message === "string" && raw.message.trim()
         ? raw.message
         : defaults.message,
+  };
+}
+
+function normalizeAnalytics(raw: Partial<AnalyticsConfig> | undefined): AnalyticsConfig {
+  const id = typeof raw?.measurementId === "string" ? raw.measurementId.trim() : "";
+  const measurementId = isValidGaMeasurementId(id) ? id : "";
+  return {
+    // Require a valid ID — enabled alone must not inject a broken tag.
+    enabled: Boolean(raw?.enabled) && Boolean(measurementId),
+    measurementId,
   };
 }
 
@@ -240,6 +258,7 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
     banners,
     network: normalizeNetwork(raw?.network),
     vpnWall: normalizeVpnWall(raw?.vpnWall),
+    analytics: normalizeAnalytics(raw?.analytics),
     updatedAt:
       typeof raw?.updatedAt === "string" ? raw.updatedAt : DEFAULT_ADS_CONFIG.updatedAt,
   };

@@ -7,8 +7,8 @@ export const AD_SLOTS = [
   },
   {
     id: "home-bottom",
-    label: "Home — bottom banner",
-    description: "Below the video grid",
+    label: "Sticky bottom banner (GIF)",
+    description: "Fixed to the bottom on every page (home + video details). Not in the scroll.",
   },
   {
     id: "video-mid",
@@ -65,9 +65,21 @@ export const NETWORK_SLOTS = [
   },
   {
     id: "net-sticky-banner",
-    label: "ExoClick — sticky banner",
+    label: "ExoClick — sticky bottom #1",
     description:
-      "Sticky Banner (usually mobile bottom bar). Create a Sticky Banner zone in ExoClick. Loads on every page.",
+      "Sticky Banner fixed to the bottom. Create a Sticky Banner zone in ExoClick. Loads on every page.",
+  },
+  {
+    id: "net-sticky-banner-2",
+    label: "ExoClick — sticky bottom #2",
+    description:
+      "Second bottom sticky (stacks above #1). Use another Sticky Banner zone for extra impressions.",
+  },
+  {
+    id: "net-sticky-top",
+    label: "ExoClick — sticky top",
+    description:
+      "Sticky Banner fixed under the header / top of the viewport. Separate Sticky Banner zone.",
   },
 ] as const;
 
@@ -80,8 +92,10 @@ export const INTERSTITIAL_SLOTS = [
 /** Floating formats that should load site-wide from the root layout. */
 export const SITEWIDE_NETWORK_SLOTS = ["net-in-page-push"] as const;
 
-/** Sticky banner zones — fixed bottom bar, site-wide from the root layout. */
-export const STICKY_BANNER_SLOTS = ["net-sticky-banner"] as const;
+/** Sticky banner zones — fixed bars, site-wide from the root layout. */
+export const STICKY_TOP_SLOTS = ["net-sticky-top"] as const;
+export const STICKY_BOTTOM_SLOTS = ["net-sticky-banner", "net-sticky-banner-2"] as const;
+export const STICKY_BANNER_SLOTS = [...STICKY_TOP_SLOTS, ...STICKY_BOTTOM_SLOTS] as const;
 
 export type NetworkSlotId = (typeof NETWORK_SLOTS)[number]["id"];
 
@@ -213,6 +227,13 @@ export interface SiteConfig {
   siteDescription: string;
 }
 
+/** Google Analytics 4 — page views + basic engagement. */
+export interface AnalyticsConfig {
+  enabled: boolean;
+  /** GA4 Measurement ID, e.g. G-XXXXXXXXXX */
+  measurementId: string;
+}
+
 /**
  * Myanmar (or other) country wall — visitors whose IP geolocates to a blocked
  * country must use a foreign VPN exit before the site loads.
@@ -232,6 +253,7 @@ export interface AdsConfig {
   /** ExoClick layer — independent of `banners`. */
   network: AdNetworkConfig;
   vpnWall: VpnWallConfig;
+  analytics: AnalyticsConfig;
   updatedAt: string;
 }
 
@@ -294,6 +316,8 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-interstitial-mobile": { enabled: false, zoneId: "", insClass: "" },
       "net-in-page-push": { enabled: false, zoneId: "", insClass: "" },
       "net-sticky-banner": { enabled: false, zoneId: "", insClass: "" },
+      "net-sticky-banner-2": { enabled: false, zoneId: "", insClass: "" },
+      "net-sticky-top": { enabled: false, zoneId: "", insClass: "" },
     },
     popunderZoneId: "",
     popunderEnabled: false,
@@ -306,8 +330,17 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     title: "VPN required",
     message: "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ",
   },
+  analytics: {
+    enabled: false,
+    measurementId: "",
+  },
   updatedAt: new Date(0).toISOString(),
 };
+
+/** GA4 Measurement ID shape: G- followed by alphanumerics. */
+export function isValidGaMeasurementId(value: string): boolean {
+  return /^G-[A-Z0-9]+$/i.test(value.trim());
+}
 
 export function isSlotId(value: string): value is AdSlotId {
   return AD_SLOTS.some((slot) => slot.id === value);

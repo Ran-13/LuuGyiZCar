@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import AdBanner from "@/components/AdBanner";
 import ExoClickInPagePush from "@/components/ExoClickInPagePush";
 import ExoClickPopunder from "@/components/ExoClickPopunder";
 import ExoClickProvider from "@/components/ExoClickProvider";
 import ExoClickStickyBanner from "@/components/ExoClickStickyBanner";
 import Footer from "@/components/Footer";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import Header from "@/components/Header";
 import { EXOCLICK_VERIFICATION_META, readAdsConfig } from "@/lib/ads";
 import { SITE_URL } from "@/lib/site";
@@ -75,10 +77,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </main>
         <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
+        {/* Own GIF sticky — viewport-fixed on every public page including video details. */}
+        <AdBanner banner={ads.banners["home-bottom"]} sticky />
         <ExoClickInPagePush network={ads.network} />
         <ExoClickStickyBanner network={ads.network} />
         <ExoClickPopunder network={ads.network} />
         <ExoClickProvider network={ads.network} />
+        <GoogleAnalytics
+          enabled={ads.analytics.enabled}
+          measurementId={ads.analytics.measurementId}
+        />
       </body>
     </html>
   );
