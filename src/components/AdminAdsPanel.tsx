@@ -736,16 +736,14 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
         <p className="mt-4 rounded-md bg-ink-950 px-3 py-2 text-xs text-ink-400">
           Paste Zone ID + Ad tag class from each ExoClick zone&apos;s HTML tag. Example: Desktop
           Interstitial often uses class <code className="text-ink-300">eas6a97888e35</code> while
-          Mobile uses <code className="text-ink-300">eas6a97888e33</code> and banners use{" "}
-          <code className="text-ink-300">eas6a97888e2</code> — they are not interchangeable.
-          In-Page Push loads on every page; set its corner position in ExoClick (Horizontal /
-          Vertical Position), not here.           Sticky banners load on every page — use separate ExoClick
-          Sticky Banner zones for top, bottom #1, and bottom #2 (do not reuse a normal Banner zone).
-          Native / Recommendation sits under “Related Videos” on the video page — use ExoClick&apos;s
-          Native or Recommendation Widget zone type so it looks like more video thumbs, not a
-          big banner.
-          Interstitials fire when a visitor clicks a video from home / category / search.
-          The app re-arms the tag on every listing visit. If it still only shows{" "}
+          Mobile uses <code className="text-ink-300">eas6a97888e33</code>, banners use{" "}
+          <code className="text-ink-300">eas6a97888e2</code>, and Multi Format may use{" "}
+          <code className="text-ink-300">eas6a97888e38</code> — they are not interchangeable.
+          In-Page Push and Multi Format load on every page; set layout/position in ExoClick, not
+          here. Sticky banners also load sitewide — use separate Sticky Banner zones for top,
+          bottom #1, and bottom #2. Native / Recommendation sits under “Related Videos” on the
+          video page. Interstitials fire when a visitor clicks a video from home / category /
+          search. The app re-arms the tag on every listing visit. If it still only shows{" "}
           <strong className="text-ink-300">once per day</strong>, open the zone in ExoClick →{" "}
           <strong className="text-ink-300">Capping / Frequency</strong> and lower it (e.g. every
           click, or 1× per 5–15 minutes). Server-side capping cannot be overridden from this site.

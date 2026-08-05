@@ -64,6 +64,12 @@ export const NETWORK_SLOTS = [
       "In-Page Push (native push look). Position is set in ExoClick (e.g. top-right). Loads on every page.",
   },
   {
+    id: "net-multi-format",
+    label: "ExoClick — multi format",
+    description:
+      "Multi Format zone. Paste Zone ID + Ad tag class from the HTML tag (e.g. eas6a97888e38). Loads on every page; layout is set in ExoClick.",
+  },
+  {
     id: "net-sticky-banner",
     label: "ExoClick — sticky bottom #1",
     description:
@@ -90,7 +96,7 @@ export const INTERSTITIAL_SLOTS = [
 ] as const;
 
 /** Floating formats that should load site-wide from the root layout. */
-export const SITEWIDE_NETWORK_SLOTS = ["net-in-page-push"] as const;
+export const SITEWIDE_NETWORK_SLOTS = ["net-in-page-push", "net-multi-format"] as const;
 
 /** Sticky banner zones — fixed bars, site-wide from the root layout. */
 export const STICKY_TOP_SLOTS = ["net-sticky-top"] as const;
@@ -315,6 +321,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "net-interstitial-desktop": { enabled: false, zoneId: "", insClass: "" },
       "net-interstitial-mobile": { enabled: false, zoneId: "", insClass: "" },
       "net-in-page-push": { enabled: false, zoneId: "", insClass: "" },
+      "net-multi-format": { enabled: false, zoneId: "", insClass: "" },
       "net-sticky-banner": { enabled: false, zoneId: "", insClass: "" },
       "net-sticky-banner-2": { enabled: false, zoneId: "", insClass: "" },
       "net-sticky-top": { enabled: false, zoneId: "", insClass: "" },
