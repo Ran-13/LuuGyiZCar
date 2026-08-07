@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import AdminAnalyticsPanel from "@/components/AdminAnalyticsPanel";
 import {
   AD_SLOTS,
   EXOCLICK_INS_CLASS,
   NETWORK_SLOTS,
-  isValidGaMeasurementId,
   isValidInsClass,
   isValidVerificationCode,
   isValidZoneId,
@@ -187,6 +187,8 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
         </button>
       </div>
 
+      <AdminAnalyticsPanel />
+
       <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
         <h2 className="font-semibold text-ink-100">Site branding</h2>
         <p className="mt-1 text-sm text-ink-400">
@@ -222,56 +224,6 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
             placeholder="Describe this site for Telegram preview and SEO"
             className="mt-1.5 w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500"
           />
-        </label>
-      </section>
-
-      <section className="rounded-lg border border-ink-700 bg-ink-900 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-ink-100">Google Analytics</h2>
-            <p className="mt-1 text-xs text-ink-400">
-              GA4 page views (including client-side navigations). Create a property at{" "}
-              <span className="text-ink-300">analytics.google.com</span>, then paste the
-              Measurement ID (starts with G-).
-            </p>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-ink-300">
-            <input
-              type="checkbox"
-              checked={config.analytics.enabled}
-              onChange={(e) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  analytics: { ...prev.analytics, enabled: e.target.checked },
-                }))
-              }
-            />
-            Enabled
-          </label>
-        </div>
-
-        <label className="mt-4 block text-sm text-ink-300">
-          Measurement ID
-          <input
-            value={config.analytics.measurementId}
-            onChange={(e) =>
-              setConfig((prev) => ({
-                ...prev,
-                analytics: { ...prev.analytics, measurementId: e.target.value.trim() },
-              }))
-            }
-            placeholder="G-XXXXXXXXXX"
-            className={`mt-1.5 w-full rounded-md border bg-ink-950 px-3 py-2 text-ink-100 outline-none focus:border-brand-500 ${
-              config.analytics.measurementId &&
-              !isValidGaMeasurementId(config.analytics.measurementId)
-                ? "border-red-500"
-                : "border-ink-700"
-            }`}
-          />
-          <span className="mt-1 block text-xs text-ink-400">
-            Admin pages are not counted. Reports appear in Google Analytics → Reports →
-            Engagement → Pages and screens.
-          </span>
         </label>
       </section>
 

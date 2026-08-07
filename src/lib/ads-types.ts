@@ -233,13 +233,6 @@ export interface SiteConfig {
   siteDescription: string;
 }
 
-/** Google Analytics 4 — page views + basic engagement. */
-export interface AnalyticsConfig {
-  enabled: boolean;
-  /** GA4 Measurement ID, e.g. G-XXXXXXXXXX */
-  measurementId: string;
-}
-
 /**
  * Myanmar (or other) country wall — visitors whose IP geolocates to a blocked
  * country must use a foreign VPN exit before the site loads.
@@ -259,7 +252,6 @@ export interface AdsConfig {
   /** ExoClick layer — independent of `banners`. */
   network: AdNetworkConfig;
   vpnWall: VpnWallConfig;
-  analytics: AnalyticsConfig;
   updatedAt: string;
 }
 
@@ -337,17 +329,8 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     title: "VPN required",
     message: "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ",
   },
-  analytics: {
-    enabled: false,
-    measurementId: "",
-  },
   updatedAt: new Date(0).toISOString(),
 };
-
-/** GA4 Measurement ID shape: G- followed by alphanumerics. */
-export function isValidGaMeasurementId(value: string): boolean {
-  return /^G-[A-Z0-9]+$/i.test(value.trim());
-}
 
 export function isSlotId(value: string): value is AdSlotId {
   return AD_SLOTS.some((slot) => slot.id === value);

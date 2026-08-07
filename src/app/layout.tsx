@@ -5,8 +5,8 @@ import ExoClickPopunder from "@/components/ExoClickPopunder";
 import ExoClickProvider from "@/components/ExoClickProvider";
 import ExoClickStickyBanner from "@/components/ExoClickStickyBanner";
 import Footer from "@/components/Footer";
-import GoogleAnalytics from "@/components/GoogleAnalytics";
 import Header from "@/components/Header";
+import SiteAnalytics from "@/components/SiteAnalytics";
 import { EXOCLICK_VERIFICATION_META, readAdsConfig } from "@/lib/ads";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -83,10 +83,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ExoClickStickyBanner network={ads.network} />
         <ExoClickPopunder network={ads.network} />
         <ExoClickProvider network={ads.network} />
-        <GoogleAnalytics
-          enabled={ads.analytics.enabled}
-          measurementId={ads.analytics.measurementId}
-        />
+        <SiteAnalytics />
       </body>
     </html>
   );
