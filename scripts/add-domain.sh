@@ -118,7 +118,7 @@ for i in $(seq 1 30); do
 done
 
 echo "==> Installing nginx + SSL for $DOMAIN"
-install_luugyi_ssl "$NAME" "$DOMAIN" "$PORT" "${ROOT}/sites/${NAME}/uploads"
+install_luugyi_ssl "$NAME" "$DOMAIN" "$PORT" "${ROOT}/sites/${NAME}/uploads" "$ROOT"
 
 # fresh-site.sh redeploys an existing domain through this script, so the shared
 # cache zone can still hold entries for this hostname from the previous build.
