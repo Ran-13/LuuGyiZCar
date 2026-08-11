@@ -124,6 +124,9 @@ if [[ -d /etc/nginx/sites-available ]]; then
   echo "==> Installing nginx site (new file only)"
   sed "s|YOUR-DOMAIN.com|${DOMAIN}|g; s|UPLOADS_ROOT|${ROOT}/sites/prod/uploads|g" \
     "$ROOT/deploy/nginx-luugyi-zcar.conf" > "$NGINX_AVAILABLE"
+  if grep -q "proxy_cache_path" "$NGINX_AVAILABLE"; then
+    sed -i '/proxy_cache_path/,/use_temp_path=off;/d' "$NGINX_AVAILABLE"
+  fi
   ln -sfn "$NGINX_AVAILABLE" "$NGINX_ENABLED"
   nginx -t
   systemctl reload nginx

@@ -119,8 +119,24 @@ NGINX_ENABLED="/etc/nginx/sites-enabled/luugyi-$NAME"
 
 if [[ -d /etc/nginx/sites-available ]]; then
   echo "==> Installing nginx site luugyi-$NAME (new file only)"
+
+  # Shared cache zone must exist once in nginx.conf (not in each vhost).
+  mkdir -p /var/cache/nginx/luugyi
+  chown www-data:www-data /var/cache/nginx/luugyi 2>/dev/null || true
+  if [[ -f /etc/nginx/nginx.conf ]] && ! grep -q "luugyi_cache" /etc/nginx/nginx.conf; then
+    echo "==> Adding proxy_cache_path to /etc/nginx/nginx.conf"
+    sed -i '/http\s*{/a\    proxy_cache_path /var/cache/nginx/luugyi levels=1:2 keys_zone=luugyi_cache:10m max_size=500m inactive=60m use_temp_path=off;' \
+      /etc/nginx/nginx.conf
+  fi
+
   sed "s|YOUR-DOMAIN.com|${DOMAIN}|g; s/8082/${PORT}/g; s|UPLOADS_ROOT|${ROOT}/sites/${NAME}/uploads|g" \
     "$ROOT/deploy/nginx-luugyi-zcar.conf" > "$NGINX_AVAILABLE"
+
+  # Safety: never allow proxy_cache_path inside a site file (causes nginx emerg).
+  if grep -q "proxy_cache_path" "$NGINX_AVAILABLE"; then
+    sed -i '/proxy_cache_path/,/use_temp_path=off;/d' "$NGINX_AVAILABLE"
+  fi
+
   ln -sfn "$NGINX_AVAILABLE" "$NGINX_ENABLED"
   nginx -t
   systemctl reload nginx

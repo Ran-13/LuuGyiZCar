@@ -248,6 +248,7 @@ certbot --nginx -d luugyizcar.site -d www.luugyizcar.site
 |---------|--------|
 | 502 Bad Gateway | `docker compose -p luugyi-akogyivip ps` and `logs` |
 | Certbot fails | DNS not pointing yet; retry certbot after dig works |
+| nginx: same path `/var/cache/nginx/luugyi` | `proxy_cache_path` must be only in `nginx.conf`. Run `./scripts/patch-nginx-cache.sh` then `nginx -t && systemctl reload nginx` |
 | Wrong site content | Confirm ports: akogyivip=8082, luugyizcar=8083 |
 | Admin 404 at `/admin` | Use secret slug from `.env` (`ADMIN_PATH`) |
 | Can’t upload GIF | Volume writable; max 5MB; gif/jpg/png/webp |

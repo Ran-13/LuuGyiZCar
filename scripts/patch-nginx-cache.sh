@@ -30,6 +30,12 @@ for file in /etc/nginx/sites-available/luugyi-*; do
   name="$(basename "$file")"
   echo "==> Patching $name"
 
+  # 3a0. proxy_cache_path belongs only in nginx.conf — strip from vhosts.
+  if grep -q "proxy_cache_path" "$file"; then
+    sed -i '/proxy_cache_path/,/use_temp_path=off;/d' "$file"
+    echo "  - removed duplicate proxy_cache_path from vhost"
+  fi
+
   # 3a. Add gzip if missing
   if ! grep -q "gzip on" "$file"; then
     sed -i '/client_max_body_size/a\
