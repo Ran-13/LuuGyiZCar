@@ -8,9 +8,11 @@ import {
   fetchAdsterraStats,
   isoDateUTC,
   resolveAdsterraApiKey,
+  resolveAdsterraDomainId,
   sumStats,
   type AdsterraGroupBy,
 } from "@/lib/adsterra-api";
+import { SITE_URL } from "@/lib/site";
 
 export const runtime = "nodejs";
 
@@ -18,7 +20,8 @@ const GROUP_BY: AdsterraGroupBy[] = ["date", "placement", "country", "domain"];
 
 /**
  * Admin-only Adsterra Publisher stats proxy.
- * Uses ADSTERRA_API_KEY env or ads.adsterra.apiKey.
+ * Defaults to this site’s Adsterra domain (per admin / SITE_URL).
+ * Pass domain=all for account-wide, or domain=<id> to override.
  */
 export async function GET(request: Request) {
   const gate = await requireAdminApi(request);
@@ -41,8 +44,7 @@ export async function GET(request: Request) {
   const range = searchParams.get("range") || "7";
   const groupRaw = (searchParams.get("group_by") || "date") as AdsterraGroupBy;
   const groupBy = GROUP_BY.includes(groupRaw) ? groupRaw : "date";
-  const domainId = searchParams.get("domain") || undefined;
-  const placementId = searchParams.get("placement") || undefined;
+  const domainParam = (searchParams.get("domain") || "").trim();
 
   let startDate = searchParams.get("start_date") || "";
   let finishDate = searchParams.get("finish_date") || "";
@@ -59,17 +61,45 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [stats, domains, placements] = await Promise.all([
-      fetchAdsterraStats(apiKey, {
-        startDate,
-        finishDate,
-        groupBy,
-        domainId,
-        placementId,
-      }),
+    const [domains, placements] = await Promise.all([
       fetchAdsterraDomains(apiKey).catch(() => []),
       fetchAdsterraPlacements(apiKey).catch(() => []),
     ]);
+
+    const requestHost = (() => {
+      try {
+        return new URL(request.headers.get("referer") || request.url).hostname;
+      } catch {
+        return "";
+      }
+    })();
+
+    const resolved = resolveAdsterraDomainId(domains, {
+      explicitId: ads.adsterra?.statsDomainId,
+      siteUrl: SITE_URL,
+      hostname: requestHost,
+      siteName: ads.site?.siteName,
+    });
+
+    // Per-admin default: this site’s domain. domain=all → account total.
+    let domainId: string | undefined;
+    if (domainParam === "all") {
+      domainId = undefined;
+    } else if (/^\d+$/.test(domainParam)) {
+      domainId = domainParam;
+    } else if (resolved.id) {
+      domainId = resolved.id;
+    }
+
+    const effectiveGroupBy: AdsterraGroupBy =
+      !domainId && groupBy === "date" ? "domain" : groupBy;
+
+    const stats = await fetchAdsterraStats(apiKey, {
+      startDate,
+      finishDate,
+      groupBy: effectiveGroupBy,
+      domainId,
+    });
 
     const totals = sumStats(stats.items ?? []);
     const ctr =
@@ -87,7 +117,12 @@ export async function GET(request: Request) {
         ok: true,
         startDate,
         finishDate,
-        groupBy,
+        groupBy: effectiveGroupBy,
+        domainId: domainId || null,
+        autoDomainId: resolved.id || null,
+        autoDomainTitle: resolved.title || null,
+        autoSource: resolved.source || null,
+        siteUrl: SITE_URL,
         totals: {
           impression: totals.impression,
           clicks: totals.clicks,

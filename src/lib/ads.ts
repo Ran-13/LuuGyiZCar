@@ -174,10 +174,13 @@ function normalizeAdsterra(raw: Partial<AdsterraConfig> | undefined): AdsterraCo
     banners[slot.id] = normalizeAdsterraBanner(raw?.banners?.[slot.id], defaults.banners[slot.id]);
   }
 
+  const statsDomainIdRaw =
+    typeof raw?.statsDomainId === "string" ? raw.statsDomainId.trim() : "";
   return {
     enabled: Boolean(raw?.enabled),
     apiKey:
       typeof raw?.apiKey === "string" ? raw.apiKey.trim().slice(0, 128) : defaults.apiKey,
+    statsDomainId: /^\d+$/.test(statsDomainIdRaw) ? statsDomainIdRaw : "",
     scripts,
     banners,
   };

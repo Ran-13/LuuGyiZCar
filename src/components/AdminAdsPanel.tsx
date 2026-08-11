@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminAnalyticsPanel from "@/components/AdminAnalyticsPanel";
 import AdminAdsterraStats from "@/components/AdminAdsterraStats";
@@ -63,11 +63,32 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
   const [apiKeySet, setApiKeySet] = useState(
     Boolean((initial.adsterra as { apiKeySet?: boolean })?.apiKeySet || initial.adsterra?.apiKey),
   );
+  const [adsterraDomains, setAdsterraDomains] = useState<{ id: number; title: string }[]>([]);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<AdSlotId | null>(null);
   const [section, setSection] = useState(NAV[0].id);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (section !== "adsterra" && section !== "adsterra-stats") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`${adminApiUrl("/adsterra-stats")}?range=1&group_by=domain&domain=all`, {
+          credentials: "same-origin",
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { domains?: { id: number; title: string }[] };
+        if (!cancelled && Array.isArray(json.domains)) setAdsterraDomains(json.domains);
+      } catch {
+        /* ignore — stats page may still work via its own fetch */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [section]);
 
   function updateAnnouncement<K extends keyof AdsConfig["announcement"]>(
     key: K,
@@ -1025,6 +1046,27 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
               />
               <span className="mt-1 block text-xs text-ink-500">
                 From Adsterra → Settings → API. Or set ADSTERRA_API_KEY in .env
+              </span>
+            </label>
+
+            <label className={`mt-4 ${labelCls}`}>
+              Stats website (this admin)
+              <select
+                value={config.adsterra.statsDomainId || ""}
+                onChange={(e) => updateAdsterra({ statsDomainId: e.target.value })}
+                className={field}
+              >
+                <option value="">Auto — match from site URL</option>
+                {adsterraDomains.map((d) => (
+                  <option key={d.id} value={String(d.id)}>
+                    {d.title}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-ink-500">
+                Each site admin shows only this domain’s stats. Leave Auto if{" "}
+                <code className="text-ink-400">NEXT_PUBLIC_SITE_URL</code> matches the
+                Adsterra website name (luugyizcar / akogyivip).
               </span>
             </label>
 

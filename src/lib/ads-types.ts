@@ -333,6 +333,11 @@ export interface AdsterraConfig {
    * this field is optional per-site override. Never expose to the public site.
    */
   apiKey: string;
+  /**
+   * Adsterra website (domain) id for this site’s admin stats.
+   * Empty = auto-match from NEXT_PUBLIC_SITE_URL / hostname.
+   */
+  statsDomainId: string;
   /** Sitewide Social Bar / Popunder scripts (happyworldzone-style). */
   scripts: AdsterraScript[];
   banners: Record<AdsterraBannerSlotId, AdsterraBannerUnit>;
@@ -424,6 +429,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
   adsterra: {
     enabled: false,
     apiKey: "",
+    statsDomainId: "",
     scripts: [
       {
         id: "social-bar",
