@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readAdsConfig } from "@/lib/ads";
 import {
   findQuality,
   isEpornerVideoId,
@@ -117,6 +118,11 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden", code: "CROSS_ORIGIN" }, { status: 403 });
   }
 
+  const ads = await readAdsConfig();
+  if (ads.playback?.proxyEnabled === false) {
+    return NextResponse.json({ error: "Proxy disabled", code: "PROXY_OFF" }, { status: 403 });
+  }
+
   const limit = checkRateLimit(
     `stream:${getClientKey(request.headers)}`,
     RATE_LIMIT,
@@ -196,6 +202,11 @@ export async function GET(request: Request, context: RouteContext) {
 /** Chrome often HEADs the media URL before seeking — must advertise size + ranges. */
 export async function HEAD(request: Request, context: RouteContext) {
   if (!isAllowedClient(request)) {
+    return new NextResponse(null, { status: 403 });
+  }
+
+  const ads = await readAdsConfig();
+  if (ads.playback?.proxyEnabled === false) {
     return new NextResponse(null, { status: 403 });
   }
 

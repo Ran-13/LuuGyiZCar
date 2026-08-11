@@ -1,14 +1,13 @@
 "use client";
 
 import Script from "next/script";
-import AdsterraBackGuard from "@/components/AdsterraBackGuard";
 import type { AdsterraConfig } from "@/lib/ads-types";
 
 /**
- * Adsterra Social Bar / Popunder scripts — same pattern as happyworldzone.com:
- * plain external <script src="https://pl….effectivecpmnetwork.com/….js"> tags.
+ * Adsterra Social Bar / Popunder scripts — same pattern as happyworldzone.com.
  *
- * Popunder scripts also mount AdsterraBackGuard so Back still returns to this site.
+ * Loaded afterInteractive (not lazy) so popunders attach before the first click.
+ * No history.pushState / focus reclaim — those blocked or delayed popunders.
  */
 export default function AdsterraScripts({ adsterra }: { adsterra: AdsterraConfig }) {
   if (!adsterra?.enabled) return null;
@@ -18,13 +17,12 @@ export default function AdsterraScripts({ adsterra }: { adsterra: AdsterraConfig
 
   return (
     <>
-      <AdsterraBackGuard enabled={adsterra.enabled} />
       {active.map((s) => (
         <Script
           key={s.id || s.src}
           id={`adsterra-${s.id}`}
           src={s.src}
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
       ))}
     </>

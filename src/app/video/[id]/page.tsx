@@ -117,13 +117,13 @@ async function VideoBelowFold({ video }: { video: EpornerVideo }) {
 
 export default async function VideoPage({ params }: PageProps) {
   const { id } = await params;
-  // Do not await ads here — player must paint as soon as video metadata is ready.
-  const video = await getVideoById(id);
+  const [video, ads] = await Promise.all([getVideoById(id), readAdsConfig()]);
   if (!video) notFound();
 
   const tags = parseKeywords(video.keywords);
   const rating = formatRating(video.rate);
   const added = formatAdded(video.added);
+  const proxyEnabled = ads.playback?.proxyEnabled !== false;
 
   const uploadDate = toIsoDate(video.added);
   const duration = toIsoDuration(video.length_sec);
@@ -165,6 +165,7 @@ export default async function VideoPage({ params }: PageProps) {
           embedSrc={video.embed}
           title={video.title}
           poster={video.default_thumb?.src}
+          proxyEnabled={proxyEnabled}
         />
 
         <h1 className="mt-4 text-lg leading-snug font-bold text-ink-100 sm:text-xl">

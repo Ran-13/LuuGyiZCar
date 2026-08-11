@@ -17,6 +17,8 @@ interface Props {
   embedSrc: string;
   title: string;
   poster?: string;
+  /** When false, skip proxy and use Eporner embed only. */
+  proxyEnabled?: boolean;
 }
 
 type Mode = "loading" | "native" | "embed" | "error";
@@ -25,11 +27,17 @@ type Mode = "loading" | "native" | "embed" | "error";
  * Plays via our VPS stream proxy (no viewer VPN needed). Falls back to the
  * Eporner iframe if sources cannot be resolved.
  */
-export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
+export default function VideoEmbed({
+  id,
+  embedSrc,
+  title,
+  poster,
+  proxyEnabled = true,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const resumeAfterSeek = useRef(false);
   const recoverTries = useRef(0);
-  const [mode, setMode] = useState<Mode>("loading");
+  const [mode, setMode] = useState<Mode>(proxyEnabled ? "loading" : "embed");
   const [qualities, setQualities] = useState<Quality[]>([]);
   const [qualityId, setQualityId] = useState<string>("");
   const [attempt, setAttempt] = useState(0);
@@ -39,6 +47,10 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
   const active = qualities.find((q) => q.id === qualityId) ?? qualities[0];
 
   const loadPlayback = useCallback(async () => {
+    if (!proxyEnabled) {
+      setMode("embed");
+      return;
+    }
     setMode("loading");
     setMediaError(false);
     try {
@@ -48,9 +60,14 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
       if (!res.ok) throw new Error(`playback ${res.status}`);
       const data = (await res.json()) as {
         ok?: boolean;
+        proxyDisabled?: boolean;
         defaultQuality?: string | null;
         qualities?: Quality[];
       };
+      if (data.proxyDisabled) {
+        setMode("embed");
+        return;
+      }
       if (!data.ok || !data.qualities?.length) throw new Error("no qualities");
       setQualities(data.qualities);
       setQualityId(data.defaultQuality || data.qualities[0].id);
@@ -59,7 +76,7 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
       setQualities([]);
       setMode("embed");
     }
-  }, [id]);
+  }, [id, proxyEnabled]);
 
   useEffect(() => {
     void loadPlayback();
@@ -241,15 +258,19 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
         />
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <p className="text-xs text-ink-500">Embed fallback</p>
-        <button
-          type="button"
-          onClick={reload}
-          className="ml-auto flex items-center gap-1.5 rounded-md border border-ink-700 px-2.5 py-1.5 text-xs font-semibold text-ink-300 hover:border-brand-500 hover:text-brand-500"
-        >
-          <RotateCcw size={13} aria-hidden />
-          Try proxy again
-        </button>
+        {proxyEnabled ? (
+          <>
+            <p className="text-xs text-ink-500">Embed fallback</p>
+            <button
+              type="button"
+              onClick={reload}
+              className="ml-auto flex items-center gap-1.5 rounded-md border border-ink-700 px-2.5 py-1.5 text-xs font-semibold text-ink-300 hover:border-brand-500 hover:text-brand-500"
+            >
+              <RotateCcw size={13} aria-hidden />
+              Try proxy again
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

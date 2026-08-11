@@ -33,6 +33,7 @@ import {
   type FeedConfig,
   type NetworkSlotId,
   type NetworkZoneConfig,
+  type PlaybackConfig,
   type SiteConfig,
   type VpnWallConfig,
 } from "@/lib/ads-types";
@@ -53,6 +54,7 @@ export type {
   FeedConfig,
   NetworkSlotId,
   NetworkZoneConfig,
+  PlaybackConfig,
   SiteConfig,
   VpnWallConfig,
 };
@@ -105,6 +107,15 @@ function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfi
         ? raw.message
         : defaults.message,
   };
+}
+
+function normalizePlayback(raw: Partial<PlaybackConfig> | undefined): PlaybackConfig {
+  // Default ON when missing so existing deployments keep the proxy after upgrade.
+  // Explicit `false` turns it off.
+  if (raw && typeof raw.proxyEnabled === "boolean") {
+    return { proxyEnabled: raw.proxyEnabled };
+  }
+  return { proxyEnabled: DEFAULT_ADS_CONFIG.playback.proxyEnabled };
 }
 
 function normalizeAdsterraBanner(
@@ -373,6 +384,7 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
     network: normalizeNetwork(raw?.network),
     adsterra: normalizeAdsterra(raw?.adsterra),
     vpnWall: normalizeVpnWall(raw?.vpnWall),
+    playback: normalizePlayback(raw?.playback),
     feed: normalizeFeed(raw?.feed),
     updatedAt:
       typeof raw?.updatedAt === "string" ? raw.updatedAt : DEFAULT_ADS_CONFIG.updatedAt,

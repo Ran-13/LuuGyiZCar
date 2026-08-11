@@ -265,6 +265,15 @@ export interface VpnWallConfig {
   message: string;
 }
 
+/** Native stream proxy through this VPS (viewers do not need Eporner VPN). */
+export interface PlaybackConfig {
+  /**
+   * When on, `/api/stream` proxies MP4s. When off, the player uses the Eporner
+   * embed iframe only (saves VPS bandwidth).
+   */
+  proxyEnabled: boolean;
+}
+
 /**
  * Adsterra Social Bar / Popunder style — a single external script URL
  * (like happyworldzone.com: pl….effectivecpmnetwork.com/…/….js).
@@ -328,6 +337,8 @@ export interface AdsConfig {
   /** Adsterra layer — independent of ExoClick. */
   adsterra: AdsterraConfig;
   vpnWall: VpnWallConfig;
+  /** VPS stream proxy for the video player. */
+  playback: PlaybackConfig;
   feed: FeedConfig;
   updatedAt: string;
 }
@@ -427,6 +438,9 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     blockedCountries: ["MM"],
     title: "VPN required",
     message: "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ",
+  },
+  playback: {
+    proxyEnabled: true,
   },
   feed: {
     homeQuery: "",

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readAdsConfig } from "@/lib/ads";
 import {
   isEpornerVideoId,
   pickDefaultQuality,
@@ -31,6 +32,14 @@ export async function GET(request: Request, context: RouteContext) {
   }
   if (!allowed) {
     return NextResponse.json({ error: "Forbidden", code: "CROSS_ORIGIN" }, { status: 403 });
+  }
+
+  const ads = await readAdsConfig();
+  if (ads.playback?.proxyEnabled === false) {
+    return NextResponse.json(
+      { ok: false, proxyDisabled: true, error: "Proxy disabled" },
+      { status: 403 },
+    );
   }
 
   const limit = checkRateLimit(

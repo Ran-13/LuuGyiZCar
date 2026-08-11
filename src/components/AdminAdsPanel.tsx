@@ -375,6 +375,19 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                 className={field}
               />
             </label>
+            <label className="mt-5 flex items-center gap-2 text-sm text-ink-300">
+              <input
+                type="checkbox"
+                checked={config.playback?.proxyEnabled !== false}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    playback: { ...prev.playback, proxyEnabled: e.target.checked },
+                  }))
+                }
+              />
+              Stream proxy (VPS) — off = Eporner embed only
+            </label>
           </section>
         )}
 

@@ -150,6 +150,11 @@ export async function PUT(request: Request) {
       title: String(body.vpnWall?.title ?? current.vpnWall.title),
       message: String(body.vpnWall?.message ?? current.vpnWall.message),
     },
+    playback: {
+      proxyEnabled: Boolean(
+        body.playback?.proxyEnabled ?? current.playback?.proxyEnabled ?? true,
+      ),
+    },
     feed: body.feed
       ? {
           homeQuery: String(body.feed.homeQuery ?? current.feed.homeQuery),
