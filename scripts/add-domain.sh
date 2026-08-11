@@ -33,10 +33,13 @@ ENV_FILE="$DIR/.env"
 
 # shellcheck source=lib/nginx-cache.sh
 . "$ROOT/scripts/lib/nginx-cache.sh"
+# shellcheck source=lib/nginx-ssl.sh
+. "$ROOT/scripts/lib/nginx-ssl.sh"
 
 if [[ -f "$ENV_FILE" ]]; then
   echo "Site already exists: $DIR"
   echo "To redeploy/upgrade it: ./scripts/upgrade-site.sh $NAME"
+  echo "To fix HTTPS only:     ./scripts/fix-site-ssl.sh $NAME"
   exit 1
 fi
 
@@ -114,43 +117,8 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-NGINX_AVAILABLE="/etc/nginx/sites-available/luugyi-$NAME"
-NGINX_ENABLED="/etc/nginx/sites-enabled/luugyi-$NAME"
-
-if [[ -d /etc/nginx/sites-available ]]; then
-  echo "==> Installing nginx site luugyi-$NAME (new file only)"
-
-  # Shared cache zone must exist once in nginx.conf (not in each vhost).
-  mkdir -p /var/cache/nginx/luugyi
-  chown www-data:www-data /var/cache/nginx/luugyi 2>/dev/null || true
-  if [[ -f /etc/nginx/nginx.conf ]] && ! grep -q "luugyi_cache" /etc/nginx/nginx.conf; then
-    echo "==> Adding proxy_cache_path to /etc/nginx/nginx.conf"
-    sed -i '/http\s*{/a\    proxy_cache_path /var/cache/nginx/luugyi levels=1:2 keys_zone=luugyi_cache:10m max_size=500m inactive=60m use_temp_path=off;' \
-      /etc/nginx/nginx.conf
-  fi
-
-  sed "s|YOUR-DOMAIN.com|${DOMAIN}|g; s/8082/${PORT}/g; s|UPLOADS_ROOT|${ROOT}/sites/${NAME}/uploads|g" \
-    "$ROOT/deploy/nginx-luugyi-zcar.conf" > "$NGINX_AVAILABLE"
-
-  # Safety: never allow proxy_cache_path inside a site file (causes nginx emerg).
-  if grep -q "proxy_cache_path" "$NGINX_AVAILABLE"; then
-    sed -i '/proxy_cache_path/,/use_temp_path=off;/d' "$NGINX_AVAILABLE"
-  fi
-
-  ln -sfn "$NGINX_AVAILABLE" "$NGINX_ENABLED"
-  nginx -t
-  systemctl reload nginx
-
-  if command -v certbot >/dev/null 2>&1; then
-    certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos \
-      --register-unsafely-without-email 2>/dev/null \
-      || certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos \
-        --register-unsafely-without-email 2>/dev/null \
-      || echo "Certbot pending — point DNS, then: certbot --nginx -d $DOMAIN"
-  fi
-else
-  echo "Nginx not found — proxy ${DOMAIN} → 127.0.0.1:${PORT} yourself."
-fi
+echo "==> Installing nginx + SSL for $DOMAIN"
+install_luugyi_ssl "$NAME" "$DOMAIN" "$PORT" "${ROOT}/sites/${NAME}/uploads"
 
 # fresh-site.sh redeploys an existing domain through this script, so the shared
 # cache zone can still hold entries for this hostname from the previous build.
@@ -168,5 +136,6 @@ echo "  Pass:   ${PASS}"
 echo "  Port:   127.0.0.1:${PORT}"
 echo "  Env:    $ENV_FILE"
 echo
+echo "  If HTTPS failed (DNS): ./scripts/fix-site-ssl.sh $NAME"
 echo "  Upgrade later: ./scripts/upgrade-site.sh $NAME"
 echo "=============================================="

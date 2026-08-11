@@ -247,7 +247,8 @@ certbot --nginx -d luugyizcar.site -d www.luugyizcar.site
 | Problem | Check |
 |---------|--------|
 | 502 Bad Gateway | `docker compose -p luugyi-akogyivip ps` and `logs` |
-| Certbot fails | DNS not pointing yet; retry certbot after dig works |
+| Certbot fails | DNS not pointing yet; retry: `./scripts/fix-site-ssl.sh <site>` |
+| certbot: no matching server block | Do **not** use `certbot install`. Use `./scripts/fix-site-ssl.sh <site>` — it wires SSL into `luugyi-<site>` itself |
 | nginx: same path `/var/cache/nginx/luugyi` | `proxy_cache_path` must be only in `nginx.conf`. Run `./scripts/patch-nginx-cache.sh` then `nginx -t && systemctl reload nginx` |
 | Wrong site content | Confirm ports: akogyivip=8082, luugyizcar=8083 |
 | Admin 404 at `/admin` | Use secret slug from `.env` (`ADMIN_PATH`) |
