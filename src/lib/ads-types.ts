@@ -234,6 +234,10 @@ export interface SiteConfig {
   siteName: string;
   /** Per-site description for SEO, previews, and footer copy. */
   siteDescription: string;
+  /** Page background (default black). Hex, e.g. #0a0a0a */
+  backgroundColor: string;
+  /** Primary text color. Hex, e.g. #e6e6e6 */
+  textColor: string;
 }
 
 /**
@@ -249,6 +253,8 @@ export interface FeedConfig {
   homeSubtitle: string;
   /** Used on video pages when the clip has no usable tags. */
   relatedFallbackQuery: string;
+  /** Video card grid: 1 or 2 columns (per site). */
+  gridColumns: 1 | 2;
   /** Nav + category pages for this site. */
   categories: Category[];
 }
@@ -362,6 +368,8 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
   site: {
     siteName: "LuuGyi Zcar",
     siteDescription: "Browse and search HD videos across Korea, Japan, Asian, amateur and more categories.",
+    backgroundColor: "#0a0a0a",
+    textColor: "#e6e6e6",
   },
   announcement: {
     enabled: true,
@@ -465,6 +473,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     homeTitle: "Trending Now",
     homeSubtitle: "Most watched this week",
     relatedFallbackQuery: "asian",
+    gridColumns: 2,
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
   },
   updatedAt: new Date(0).toISOString(),

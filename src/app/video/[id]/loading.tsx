@@ -1,6 +1,10 @@
 import GridSkeleton from "@/components/GridSkeleton";
+import { readAdsConfig } from "@/lib/ads";
 
-export default function Loading() {
+export default async function Loading() {
+  const ads = await readAdsConfig();
+  const columns = ads.feed.gridColumns === 1 ? 1 : 2;
+
   return (
     <>
       <div>
@@ -24,7 +28,7 @@ export default function Loading() {
 
       <div className="mt-12">
         <div className="mb-4 h-6 w-40 animate-pulse rounded bg-ink-800" />
-        <GridSkeleton count={12} />
+        <GridSkeleton count={12} columns={columns} />
       </div>
     </>
   );

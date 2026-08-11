@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import SavedVideoList from "@/components/SavedVideoList";
+import { readAdsConfig } from "@/lib/ads";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 export const metadata: Metadata = {
   title: "Favorites",
-  // Personal, device-local content — nothing for a crawler to index.
   robots: { index: false, follow: false },
 };
 
-export default function FavoritesPage() {
+export default async function FavoritesPage() {
+  const ads = await readAdsConfig();
   return (
     <SavedVideoList
       storageKey={STORAGE_KEYS.favorites}
       title="Favorites"
       emptyMessage="Tap the heart on any video to save it here."
       clearLabel="Clear all"
+      columns={ads.feed.gridColumns === 1 ? 1 : 2}
     />
   );
 }

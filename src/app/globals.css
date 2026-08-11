@@ -22,6 +22,10 @@ html {
   color-scheme: dark;
 }
 
+html.theme-light {
+  color-scheme: light;
+}
+
 body {
   background-color: var(--color-ink-950);
   color: var(--color-ink-100);

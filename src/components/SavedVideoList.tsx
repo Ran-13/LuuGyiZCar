@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { VideoSummary } from "@/lib/eporner";
 import { useStoredList } from "@/lib/use-stored-list";
+import { videoGridClassName } from "@/lib/video-grid";
 import SectionHeading from "./SectionHeading";
 import VideoCard from "./VideoCard";
 
@@ -12,6 +13,7 @@ interface Props {
   /** Shown when nothing is saved yet. */
   emptyMessage: string;
   clearLabel: string;
+  columns?: 1 | 2;
 }
 
 /**
@@ -21,7 +23,13 @@ interface Props {
  * calls — the upstream `id` endpoint takes one id per request, which would mean
  * a request per saved video.
  */
-export default function SavedVideoList({ storageKey, title, emptyMessage, clearLabel }: Props) {
+export default function SavedVideoList({
+  storageKey,
+  title,
+  emptyMessage,
+  clearLabel,
+  columns = 2,
+}: Props) {
   const { items, clear } = useStoredList<VideoSummary>(storageKey);
 
   return (
@@ -55,7 +63,7 @@ export default function SavedVideoList({ storageKey, title, emptyMessage, clearL
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-x-4 sm:gap-y-6 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+        <div className={videoGridClassName(columns)}>
           {items.map((video) => (
             <VideoCard key={video.id} video={video} />
           ))}

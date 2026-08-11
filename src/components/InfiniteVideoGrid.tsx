@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mergeUniqueById, type EpornerVideo, type SortOrder } from "@/lib/eporner";
 import type { Category } from "@/lib/categories";
+import { videoGridClassName } from "@/lib/video-grid";
 import VideoCard from "./VideoCard";
 
 interface Props {
@@ -19,6 +20,8 @@ interface Props {
   priorityCount?: number;
   /** Site categories for the card chip (falls back to defaults inside VideoCard). */
   categories?: Category[];
+  /** Admin-controlled column count for this site. */
+  columns?: 1 | 2;
 }
 
 /** Start fetching before the sentinel is actually on screen. */
@@ -33,6 +36,7 @@ export default function InfiniteVideoGrid({
   excludeId,
   priorityCount = 0,
   categories,
+  columns = 2,
 }: Props) {
   const [videos, setVideos] = useState(initialVideos);
   const [page, setPage] = useState(1);
@@ -72,8 +76,6 @@ export default function InfiniteVideoGrid({
 
   useEffect(() => {
     const el = sentinelRef.current;
-    // While an error is showing, wait for an explicit retry instead of
-    // hammering the endpoint every time the sentinel scrolls into view.
     if (!el || !hasMore || error) return;
 
     const observer = new IntersectionObserver(
@@ -89,7 +91,7 @@ export default function InfiniteVideoGrid({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-x-4 sm:gap-y-6 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+      <div className={videoGridClassName(columns)}>
         {videos.map((video, i) => (
           <VideoCard
             key={video.id}
@@ -110,8 +112,6 @@ export default function InfiniteVideoGrid({
           </div>
         )}
 
-        {/* Also a manual control: the observer can be suppressed by reduced-motion
-            or background-tab heuristics, and this doubles as the retry affordance. */}
         {!loading && hasMore && (
           <button
             type="button"

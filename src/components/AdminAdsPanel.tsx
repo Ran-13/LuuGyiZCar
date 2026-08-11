@@ -439,6 +439,101 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                 className={field}
               />
             </label>
+
+            <h3 className="mt-5 text-sm font-semibold text-ink-100">Theme colors</h3>
+            <p className="mt-1 text-xs text-ink-500">
+              Background defaults to black. Surfaces and muted text derive from these two
+              colors automatically.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className={labelCls}>
+                Background
+                <div className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={config.site.backgroundColor || "#0a0a0a"}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        site: { ...prev.site, backgroundColor: e.target.value },
+                      }))
+                    }
+                    className="h-10 w-12 cursor-pointer rounded border border-ink-700 bg-transparent"
+                  />
+                  <input
+                    value={config.site.backgroundColor || "#0a0a0a"}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        site: { ...prev.site, backgroundColor: e.target.value },
+                      }))
+                    }
+                    placeholder="#0a0a0a"
+                    className={field.replace("mt-1.5 ", "")}
+                  />
+                </div>
+              </label>
+              <label className={labelCls}>
+                Text
+                <div className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={config.site.textColor || "#e6e6e6"}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        site: { ...prev.site, textColor: e.target.value },
+                      }))
+                    }
+                    className="h-10 w-12 cursor-pointer rounded border border-ink-700 bg-transparent"
+                  />
+                  <input
+                    value={config.site.textColor || "#e6e6e6"}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        site: { ...prev.site, textColor: e.target.value },
+                      }))
+                    }
+                    placeholder="#e6e6e6"
+                    className={field.replace("mt-1.5 ", "")}
+                  />
+                </div>
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setConfig((prev) => ({
+                  ...prev,
+                  site: {
+                    ...prev.site,
+                    backgroundColor: "#0a0a0a",
+                    textColor: "#e6e6e6",
+                  },
+                }))
+              }
+              className="mt-3 rounded-md border border-ink-700 px-3 py-1.5 text-xs font-medium text-ink-300 hover:border-brand-500 hover:text-brand-500"
+            >
+              Reset to default (black / light gray)
+            </button>
+
+            <div
+              className="mt-4 overflow-hidden rounded-md border border-ink-700"
+              style={{
+                backgroundColor: config.site.backgroundColor || "#0a0a0a",
+                color: config.site.textColor || "#e6e6e6",
+              }}
+            >
+              <div className="px-3 py-3 text-sm font-semibold">Preview</div>
+              <div
+                className="border-t px-3 py-2 text-xs opacity-70"
+                style={{ borderColor: "currentColor" }}
+              >
+                Sample muted text · cards and headers follow this theme after Save
+              </div>
+            </div>
+
             <label className={`mt-5 ${labelCls}`}>
               Player proxy mode
               <select
@@ -464,16 +559,73 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
 
         {section === "feed" && (
           <section className={panel}>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-xs text-ink-400">
+              This site only. On <span className="text-ink-200">akogyivip</span> set home to
+              Myanmar; on other sites pick a different category or query. Each admin saves to
+              its own config.
+            </div>
+
+            <h3 className="mt-4 text-sm font-semibold text-ink-100">
+              Home page — Trending Now
+            </h3>
+            <p className="mt-1 text-xs text-ink-500">
+              Controls which videos appear in the main home grid.
+            </p>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className={labelCls}>
-                Home search query
-                <input
-                  value={config.feed.homeQuery}
-                  onChange={(e) => updateFeed({ homeQuery: e.target.value })}
-                  placeholder="Empty = all"
+                Home video source
+                <select
+                  value={(() => {
+                    const q = config.feed.homeQuery.trim().toLowerCase();
+                    if (!q) return "__all__";
+                    const match = config.feed.categories.find(
+                      (c) => c.query.trim().toLowerCase() === q,
+                    );
+                    return match ? `cat:${match.slug}` : "__custom__";
+                  })()}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "__all__") {
+                      updateFeed({ homeQuery: "" });
+                      return;
+                    }
+                    if (v === "__custom__") {
+                      if (
+                        config.feed.categories.some(
+                          (c) =>
+                            c.query.trim().toLowerCase() ===
+                            config.feed.homeQuery.trim().toLowerCase(),
+                        ) ||
+                        !config.feed.homeQuery.trim()
+                      ) {
+                        updateFeed({ homeQuery: "myanmar" });
+                      }
+                      return;
+                    }
+                    if (v.startsWith("cat:")) {
+                      const slug = v.slice(4);
+                      const cat = config.feed.categories.find((c) => c.slug === slug);
+                      if (cat) {
+                        updateFeed({
+                          homeQuery: cat.query,
+                          homeTitle: cat.label,
+                        });
+                      }
+                    }
+                  }}
                   className={field}
-                />
+                >
+                  <option value="__all__">All videos (no filter)</option>
+                  {config.feed.categories.map((c) => (
+                    <option key={c.slug} value={`cat:${c.slug}`}>
+                      Category: {c.label} ({c.query})
+                    </option>
+                  ))}
+                  <option value="__custom__">Custom search query…</option>
+                </select>
               </label>
+
               <label className={labelCls}>
                 Home sort order
                 <select
@@ -488,11 +640,66 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                   ))}
                 </select>
               </label>
+
+              <label className={labelCls}>
+                Video grid columns
+                <select
+                  value={config.feed.gridColumns === 1 ? "1" : "2"}
+                  onChange={(e) =>
+                    updateFeed({ gridColumns: e.target.value === "1" ? 1 : 2 })
+                  }
+                  className={field}
+                >
+                  <option value="2">2 columns</option>
+                  <option value="1">1 column</option>
+                </select>
+                <span className="mt-1 block text-xs text-ink-500">
+                  Applies to home, search, category, related, favorites, and history on
+                  this site.
+                </span>
+              </label>
+
+              {(() => {
+                const q = config.feed.homeQuery.trim();
+                const matched = config.feed.categories.some(
+                  (c) => c.query.trim().toLowerCase() === q.toLowerCase(),
+                );
+                const isCustom = Boolean(q) && !matched;
+                if (isCustom) {
+                  return (
+                    <label className={`${labelCls} sm:col-span-2`}>
+                      Custom search query
+                      <input
+                        value={config.feed.homeQuery}
+                        onChange={(e) => updateFeed({ homeQuery: e.target.value })}
+                        placeholder="e.g. myanmar, japan, asian milf"
+                        className={field}
+                      />
+                      <span className="mt-1 block text-xs text-ink-500">
+                        Sent to Eporner as the home page search. Example:{" "}
+                        <code className="text-ink-300">myanmar</code>
+                      </span>
+                    </label>
+                  );
+                }
+                return (
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    Active home query
+                    <input
+                      value={q || "(all videos)"}
+                      readOnly
+                      className={`${field} opacity-80`}
+                    />
+                  </label>
+                );
+              })()}
+
               <label className={labelCls}>
                 Home title
                 <input
                   value={config.feed.homeTitle}
                   onChange={(e) => updateFeed({ homeTitle: e.target.value })}
+                  placeholder="Trending Now"
                   className={field}
                 />
               </label>
@@ -514,10 +721,18 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                 placeholder="asian"
                 className={field}
               />
+              <span className="mt-1 block text-xs text-ink-500">
+                Used on video pages when a clip has no usable tags.
+              </span>
             </label>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-ink-100">Categories</h3>
+              <div>
+                <h3 className="text-sm font-semibold text-ink-100">Nav categories</h3>
+                <p className="mt-0.5 text-xs text-ink-500">
+                  Header / mobile chips for this site. Use “Set as home” to drive Trending Now.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={addCategory}
@@ -528,77 +743,103 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
             </div>
 
             <div className="mt-3 space-y-3">
-              {config.feed.categories.map((cat, index) => (
-                <div
-                  key={`${cat.slug}-${index}`}
-                  className="rounded-md border border-ink-700 bg-ink-950 p-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-medium text-ink-400">#{index + 1}</p>
-                    <div className="flex flex-wrap gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveCategory(index, -1)}
-                        disabled={index === 0}
-                        className="rounded border border-ink-700 px-2 py-0.5 text-[11px] text-ink-300 disabled:opacity-40"
-                      >
-                        Up
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveCategory(index, 1)}
-                        disabled={index === config.feed.categories.length - 1}
-                        className="rounded border border-ink-700 px-2 py-0.5 text-[11px] text-ink-300 disabled:opacity-40"
-                      >
-                        Down
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeCategory(index)}
-                        className="rounded border border-red-900/60 px-2 py-0.5 text-[11px] text-red-400"
-                      >
-                        Remove
-                      </button>
+              {config.feed.categories.map((cat, index) => {
+                const isHome =
+                  cat.query.trim().toLowerCase() ===
+                    config.feed.homeQuery.trim().toLowerCase() &&
+                  Boolean(config.feed.homeQuery.trim());
+                return (
+                  <div
+                    key={`${cat.slug}-${index}`}
+                    className={`rounded-md border bg-ink-950 p-3 ${
+                      isHome ? "border-brand-500/60" : "border-ink-700"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-ink-400">
+                        #{index + 1}
+                        {isHome ? (
+                          <span className="ml-2 text-brand-500">Home feed</span>
+                        ) : null}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateFeed({
+                              homeQuery: cat.query,
+                              homeTitle: cat.label,
+                              homeSubtitle: cat.description || config.feed.homeSubtitle,
+                            })
+                          }
+                          className="rounded border border-ink-700 px-2 py-0.5 text-[11px] text-brand-500 hover:border-brand-500"
+                        >
+                          Set as home
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveCategory(index, -1)}
+                          disabled={index === 0}
+                          className="rounded border border-ink-700 px-2 py-0.5 text-[11px] text-ink-300 disabled:opacity-40"
+                        >
+                          Up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveCategory(index, 1)}
+                          disabled={index === config.feed.categories.length - 1}
+                          className="rounded border border-ink-700 px-2 py-0.5 text-[11px] text-ink-300 disabled:opacity-40"
+                        >
+                          Down
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeCategory(index)}
+                          className="rounded border border-red-900/60 px-2 py-0.5 text-[11px] text-red-400"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                      <label className="block text-xs text-ink-400">
+                        Label
+                        <input
+                          value={cat.label}
+                          onChange={(e) => updateCategory(index, { label: e.target.value })}
+                          className={fieldSm}
+                        />
+                      </label>
+                      <label className="block text-xs text-ink-400">
+                        Query
+                        <input
+                          value={cat.query}
+                          onChange={(e) => updateCategory(index, { query: e.target.value })}
+                          className={fieldSm}
+                        />
+                      </label>
+                      <label className="block text-xs text-ink-400">
+                        Slug
+                        <input
+                          value={cat.slug}
+                          onChange={(e) =>
+                            updateCategory(index, { slug: slugifyCategory(e.target.value) })
+                          }
+                          className={fieldSm}
+                        />
+                      </label>
+                    </div>
+                    <label className="mt-2 block text-xs text-ink-400">
+                      Description
+                      <input
+                        value={cat.description}
+                        onChange={(e) => updateCategory(index, { description: e.target.value })}
+                        className={fieldSm}
+                      />
+                    </label>
                   </div>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                    <label className="block text-xs text-ink-400">
-                      Label
-                      <input
-                        value={cat.label}
-                        onChange={(e) => updateCategory(index, { label: e.target.value })}
-                        className={fieldSm}
-                      />
-                    </label>
-                    <label className="block text-xs text-ink-400">
-                      Query
-                      <input
-                        value={cat.query}
-                        onChange={(e) => updateCategory(index, { query: e.target.value })}
-                        className={fieldSm}
-                      />
-                    </label>
-                    <label className="block text-xs text-ink-400">
-                      Slug
-                      <input
-                        value={cat.slug}
-                        onChange={(e) =>
-                          updateCategory(index, { slug: slugifyCategory(e.target.value) })
-                        }
-                        className={fieldSm}
-                      />
-                    </label>
-                  </div>
-                  <label className="mt-2 block text-xs text-ink-400">
-                    Description
-                    <input
-                      value={cat.description}
-                      onChange={(e) => updateCategory(index, { description: e.target.value })}
-                      className={fieldSm}
-                    />
-                  </label>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

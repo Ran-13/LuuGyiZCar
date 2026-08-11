@@ -95,6 +95,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           batchSize={BATCH_SIZE}
           priorityCount={4}
           categories={ads.feed.categories}
+          columns={ads.feed.gridColumns === 1 ? 1 : 2}
         />
       )}
     </>

@@ -67,10 +67,12 @@ async function RelatedSection({
   query,
   currentId,
   categories,
+  columns,
 }: {
   query: string;
   currentId: string;
   categories: import("@/lib/categories").Category[];
+  columns: 1 | 2;
 }) {
   const related = await searchVideos({
     query,
@@ -90,6 +92,7 @@ async function RelatedSection({
       batchSize={RELATED_BATCH}
       excludeId={currentId}
       categories={categories}
+      columns={columns}
     />
   );
 }
@@ -99,6 +102,7 @@ async function VideoBelowFold({ video }: { video: EpornerVideo }) {
   const ads = await readAdsConfig();
   const tags = parseKeywords(video.keywords);
   const relatedQuery = tags[0] ?? ads.feed.relatedFallbackQuery;
+  const gridColumns = ads.feed.gridColumns === 1 ? 1 : 2;
 
   return (
     <>
@@ -109,11 +113,12 @@ async function VideoBelowFold({ video }: { video: EpornerVideo }) {
       <section className="mt-12">
         <SectionHeading title="Related Videos" subtitle={`More in “${relatedQuery}”`} />
         <ExoClickZone network={ads.network} slot="net-video-native" className="mb-5 w-full" />
-        <Suspense fallback={<GridSkeleton count={RELATED_BATCH} />}>
+        <Suspense fallback={<GridSkeleton count={RELATED_BATCH} columns={gridColumns} />}>
           <RelatedSection
             query={relatedQuery}
             currentId={video.id}
             categories={ads.feed.categories}
+            columns={gridColumns}
           />
         </Suspense>
       </section>
@@ -137,6 +142,7 @@ export default async function VideoPage({ params }: PageProps) {
     proxyMode === "always" ||
     (proxyMode === "auto" &&
       isBlockedCountry(country, ads.vpnWall?.blockedCountries ?? ["MM"]));
+  const gridColumns = ads.feed.gridColumns === 1 ? 1 : 2;
 
   const uploadDate = toIsoDate(video.added);
   const duration = toIsoDuration(video.length_sec);
@@ -227,7 +233,7 @@ export default async function VideoPage({ params }: PageProps) {
         fallback={
           <div className="mt-12">
             <div className="mb-4 h-6 w-40 animate-pulse rounded bg-ink-800" />
-            <GridSkeleton count={12} />
+            <GridSkeleton count={12} columns={gridColumns} />
           </div>
         }
       >

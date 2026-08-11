@@ -1,6 +1,14 @@
-export default function GridSkeleton({ count = 15 }: { count?: number }) {
+import { videoGridClassName } from "@/lib/video-grid";
+
+export default function GridSkeleton({
+  count = 15,
+  columns = 2,
+}: {
+  count?: number;
+  columns?: 1 | 2;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-x-4 sm:gap-y-6 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+    <div className={videoGridClassName(columns)}>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="animate-pulse">
           <div className="aspect-video rounded-md bg-ink-800" />

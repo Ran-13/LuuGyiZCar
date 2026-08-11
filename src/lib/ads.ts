@@ -39,6 +39,7 @@ import {
 } from "@/lib/ads-types";
 import { DEFAULT_CATEGORIES, slugifyCategory, type Category } from "@/lib/categories";
 import { isSortOrder, DEFAULT_ORDER } from "@/lib/eporner";
+import { normalizeHexColor } from "@/lib/site-theme";
 
 export type {
   AdBannerConfig,
@@ -231,6 +232,7 @@ function normalizeFeed(raw: Partial<FeedConfig> | undefined): FeedConfig {
       typeof raw?.relatedFallbackQuery === "string" && raw.relatedFallbackQuery.trim()
         ? raw.relatedFallbackQuery.trim()
         : defaults.relatedFallbackQuery,
+    gridColumns: Number(raw?.gridColumns) === 1 ? 1 : 2,
     categories:
       categories.length > 0
         ? categories
@@ -357,6 +359,11 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
         typeof site.siteDescription === "string" && site.siteDescription.trim()
           ? site.siteDescription.trim()
           : DEFAULT_ADS_CONFIG.site.siteDescription,
+      backgroundColor: normalizeHexColor(
+        site.backgroundColor,
+        DEFAULT_ADS_CONFIG.site.backgroundColor,
+      ),
+      textColor: normalizeHexColor(site.textColor, DEFAULT_ADS_CONFIG.site.textColor),
     },
     announcement: {
       enabled: announcement.enabled !== false,

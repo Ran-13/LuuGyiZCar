@@ -28,10 +28,12 @@ async function TrendingFeed({
   query,
   order,
   categories,
+  columns,
 }: {
   query: string;
   order: SortOrder;
   categories: Category[];
+  columns: 1 | 2;
 }) {
   const trending = await searchVideos({
     query,
@@ -57,6 +59,7 @@ async function TrendingFeed({
       batchSize={BATCH_SIZE}
       priorityCount={4}
       categories={categories}
+      columns={columns}
     />
   );
 }
@@ -66,6 +69,7 @@ export default async function HomePage() {
   const feed = ads.feed;
   const homeOrder = isSortOrder(feed.homeOrder) ? feed.homeOrder : DEFAULT_ORDER;
   const homeQuery = feed.homeQuery;
+  const gridColumns = feed.gridColumns === 1 ? 1 : 2;
 
   return (
     <>
@@ -99,8 +103,13 @@ export default async function HomePage() {
 
       <SectionHeading as="h1" title={feed.homeTitle} subtitle={feed.homeSubtitle} />
 
-      <Suspense fallback={<GridSkeleton count={BATCH_SIZE} />}>
-        <TrendingFeed query={homeQuery} order={homeOrder} categories={feed.categories} />
+      <Suspense fallback={<GridSkeleton count={BATCH_SIZE} columns={gridColumns} />}>
+        <TrendingFeed
+          query={homeQuery}
+          order={homeOrder}
+          categories={feed.categories}
+          columns={gridColumns}
+        />
       </Suspense>
 
       <ExoClickZone network={ads.network} slot="net-home-bottom" className="mt-8" />

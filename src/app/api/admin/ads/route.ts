@@ -136,6 +136,10 @@ export async function PUT(request: Request) {
     site: {
       siteName: String(body.site?.siteName ?? current.site.siteName),
       siteDescription: String(body.site?.siteDescription ?? current.site.siteDescription),
+      backgroundColor: String(
+        body.site?.backgroundColor ?? current.site.backgroundColor ?? "#0a0a0a",
+      ),
+      textColor: String(body.site?.textColor ?? current.site.textColor ?? "#e6e6e6"),
     },
     announcement: {
       enabled: Boolean(announcement.enabled),
@@ -191,6 +195,7 @@ export async function PUT(request: Request) {
           relatedFallbackQuery: String(
             body.feed.relatedFallbackQuery ?? current.feed.relatedFallbackQuery,
           ),
+          gridColumns: Number(body.feed.gridColumns ?? current.feed.gridColumns) === 1 ? 1 : 2,
           categories: Array.isArray(body.feed.categories)
             ? body.feed.categories
             : current.feed.categories,

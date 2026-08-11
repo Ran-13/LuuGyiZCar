@@ -1,7 +1,11 @@
 import GridSkeleton from "@/components/GridSkeleton";
+import { readAdsConfig } from "@/lib/ads";
 
 /** Shown while the home / trending page is loading. */
-export default function Loading() {
+export default async function Loading() {
+  const ads = await readAdsConfig();
+  const columns = ads.feed.gridColumns === 1 ? 1 : 2;
+
   return (
     <>
       <div className="mb-6 flex gap-2 lg:hidden">
@@ -17,7 +21,7 @@ export default function Loading() {
         <div className="mt-2 h-3.5 w-56 animate-pulse rounded bg-ink-850" />
       </div>
 
-      <GridSkeleton count={24} />
+      <GridSkeleton count={24} columns={columns} />
     </>
   );
 }
