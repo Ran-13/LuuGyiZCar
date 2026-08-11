@@ -20,8 +20,7 @@ const GROUP_BY: AdsterraGroupBy[] = ["date", "placement", "country", "domain"];
 
 /**
  * Admin-only Adsterra Publisher stats proxy.
- * Defaults to this site’s Adsterra domain (per admin / SITE_URL).
- * Pass domain=all for account-wide, or domain=<id> to override.
+ * Always scoped to this site’s Adsterra domain (SITE_URL / saved statsDomainId).
  */
 export async function GET(request: Request) {
   const gate = await requireAdminApi(request);
@@ -81,23 +80,37 @@ export async function GET(request: Request) {
       siteName: ads.site?.siteName,
     });
 
-    // Per-admin default: this site’s domain. domain=all → account total.
+    // Always scope to this site’s domain — never account-wide from the UI.
     let domainId: string | undefined;
-    if (domainParam === "all") {
-      domainId = undefined;
-    } else if (/^\d+$/.test(domainParam)) {
+    if (/^\d+$/.test(domainParam) && domainParam !== "all") {
       domainId = domainParam;
     } else if (resolved.id) {
       domainId = resolved.id;
     }
 
-    const effectiveGroupBy: AdsterraGroupBy =
-      !domainId && groupBy === "date" ? "domain" : groupBy;
+    if (!domainId) {
+      const websiteDomains = domains.filter(
+        (d) => /\./.test(d.title) && !/^smart-?link/i.test(d.title),
+      );
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Could not resolve Adsterra website for this site",
+          code: "NO_DOMAIN",
+          hint: "Set Stats website under Admin → Adsterra, or set NEXT_PUBLIC_SITE_URL to match luugyizcar.site / akogyivip.site",
+          domains: websiteDomains,
+          autoDomainId: null,
+          autoDomainTitle: null,
+          siteUrl: SITE_URL,
+        },
+        { status: 400 },
+      );
+    }
 
     const stats = await fetchAdsterraStats(apiKey, {
       startDate,
       finishDate,
-      groupBy: effectiveGroupBy,
+      groupBy,
       domainId,
     });
 
@@ -108,19 +121,21 @@ export async function GET(request: Request) {
       totals.impression > 0 ? (totals.revenue / totals.impression) * 1000 : 0;
 
     const domainMap = Object.fromEntries(domains.map((d) => [d.id, d.title]));
+    const sitePlacements = placements.filter((p) => String(p.domain_id) === domainId);
     const placementMap = Object.fromEntries(
-      placements.map((p) => [p.id, p.title || p.alias || String(p.id)]),
+      sitePlacements.map((p) => [p.id, p.title || p.alias || String(p.id)]),
     );
+    const websiteDomains = domains.filter((d) => /\./.test(d.title) && !/^smart-?link/i.test(d.title));
 
     return NextResponse.json(
       {
         ok: true,
         startDate,
         finishDate,
-        groupBy: effectiveGroupBy,
-        domainId: domainId || null,
-        autoDomainId: resolved.id || null,
-        autoDomainTitle: resolved.title || null,
+        groupBy,
+        domainId,
+        autoDomainId: resolved.id || domainId,
+        autoDomainTitle: resolved.title || domainMap[domainId] || null,
         autoSource: resolved.source || null,
         siteUrl: SITE_URL,
         totals: {
@@ -133,8 +148,8 @@ export async function GET(request: Request) {
         items: stats.items ?? [],
         itemCount: stats.itemCount ?? stats.items?.length ?? 0,
         dbLastUpdateTime: stats.dbLastUpdateTime ?? null,
-        domains,
-        placements,
+        domains: websiteDomains,
+        placements: sitePlacements,
         domainMap,
         placementMap,
       },

@@ -156,8 +156,9 @@ export function normalizeHost(value: string): string {
 
 /**
  * Pick the Adsterra domain id for this deployment.
- * Prefer an explicit id; otherwise match SITE_URL / hostname / site name
- * against Adsterra website titles (e.g. luugyizcar.com, akogyivip.com).
+ * Prefer an explicit id; otherwise match SITE_URL / hostname
+ * against Adsterra website titles (e.g. luugyizcar.site).
+ * Ignores Smartlink placeholders (smart-link-*).
  */
 export function resolveAdsterraDomainId(
   domains: AdsterraDomain[],
@@ -170,36 +171,48 @@ export function resolveAdsterraDomainId(
 ): { id: string; title: string; source: "explicit" | "host" | "name" | "" } {
   if (domains.length === 0) return { id: "", title: "", source: "" };
 
+  const isSmartLink = (title: string) => /^smart-?link/i.test(title.trim());
+  const realDomains = domains.filter((d) => !isSmartLink(d.title));
+  const pool = realDomains.length > 0 ? realDomains : domains;
+
   const explicit = (opts.explicitId ?? "").trim();
   if (/^\d+$/.test(explicit)) {
     const hit = domains.find((d) => String(d.id) === explicit);
     if (hit) return { id: String(hit.id), title: hit.title, source: "explicit" };
   }
 
+  // Prefer configured site URL over request host (admin may be on IP / localhost).
   const hosts = [
-    normalizeHost(opts.hostname ?? ""),
     normalizeHost(opts.siteUrl ?? ""),
-  ].filter(Boolean);
+    normalizeHost(opts.hostname ?? ""),
+  ].filter((h) => h && h !== "localhost" && !/^\d{1,3}(\.\d{1,3}){3}$/.test(h));
 
   for (const host of hosts) {
-    const exact = domains.find((d) => normalizeHost(d.title) === host);
+    const exact = pool.find((d) => normalizeHost(d.title) === host);
     if (exact) return { id: String(exact.id), title: exact.title, source: "host" };
 
-    const hostBase = host.split(".")[0] || host;
-    const partial = domains.find((d) => {
+    const hostBase = (host.split(".")[0] || host).replace(/[^a-z0-9]/g, "");
+    if (hostBase.length < 3) continue;
+
+    const partial = pool.find((d) => {
       const t = normalizeHost(d.title);
-      const base = t.split(".")[0] || t;
-      return base === hostBase || t.includes(hostBase) || host.includes(base);
+      if (!t.includes(".")) return false; // require real hostname titles
+      const base = (t.split(".")[0] || "").replace(/[^a-z0-9]/g, "");
+      return base === hostBase;
     });
     if (partial) return { id: String(partial.id), title: partial.title, source: "host" };
   }
 
-  const name = (opts.siteName ?? "").trim().toLowerCase().replace(/\s+/g, "");
-  if (name.length >= 3) {
-    const byName = domains.find((d) => {
-      const t = normalizeHost(d.title).replace(/\./g, "");
-      const base = (normalizeHost(d.title).split(".")[0] || "").replace(/[^a-z0-9]/g, "");
-      return t.includes(name) || name.includes(base) || base.includes(name);
+  const name = (opts.siteName ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  if (name.length >= 4) {
+    const byName = pool.find((d) => {
+      const t = normalizeHost(d.title);
+      if (!t.includes(".")) return false;
+      const base = (t.split(".")[0] || "").replace(/[^a-z0-9]/g, "");
+      return base === name || base.includes(name) || name.includes(base);
     });
     if (byName) return { id: String(byName.id), title: byName.title, source: "name" };
   }

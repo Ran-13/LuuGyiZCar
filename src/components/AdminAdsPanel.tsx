@@ -75,10 +75,17 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(`${adminApiUrl("/adsterra-stats")}?range=1&group_by=domain&domain=all`, {
+        const res = await fetch(`${adminApiUrl("/adsterra-stats")}?range=1&group_by=date`, {
           credentials: "same-origin",
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          // Still try domain list from error payload when NO_DOMAIN
+          const json = (await res.json().catch(() => null)) as {
+            domains?: { id: number; title: string }[];
+          } | null;
+          if (!cancelled && Array.isArray(json?.domains)) setAdsterraDomains(json.domains);
+          return;
+        }
         const json = (await res.json()) as { domains?: { id: number; title: string }[] };
         if (!cancelled && Array.isArray(json.domains)) setAdsterraDomains(json.domains);
       } catch {
