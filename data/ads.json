@@ -72,5 +72,8 @@
     "popunderZoneId": "",
     "verificationCode": "",
     "insClass": ""
+  },
+  "adsterra": {
+    "apiKey": ""
   }
 }

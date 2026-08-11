@@ -323,6 +323,11 @@ export type AdsterraBannerSlotId = (typeof ADSTERRA_BANNER_SLOTS)[number]["id"];
 export interface AdsterraConfig {
   /** Master switch for all Adsterra tags. */
   enabled: boolean;
+  /**
+   * Publisher API token (X-API-Key). Prefer env ADSTERRA_API_KEY on the server;
+   * this field is optional per-site override. Never expose to the public site.
+   */
+  apiKey: string;
   /** Sitewide Social Bar / Popunder scripts (happyworldzone-style). */
   scripts: AdsterraScript[];
   banners: Record<AdsterraBannerSlotId, AdsterraBannerUnit>;
@@ -413,6 +418,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
   },
   adsterra: {
     enabled: false,
+    apiKey: "",
     scripts: [
       {
         id: "social-bar",

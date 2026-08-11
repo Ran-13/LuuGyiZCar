@@ -173,6 +173,8 @@ function normalizeAdsterra(raw: Partial<AdsterraConfig> | undefined): AdsterraCo
 
   return {
     enabled: Boolean(raw?.enabled),
+    apiKey:
+      typeof raw?.apiKey === "string" ? raw.apiKey.trim().slice(0, 128) : defaults.apiKey,
     scripts,
     banners,
   };

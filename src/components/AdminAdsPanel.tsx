@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminAnalyticsPanel from "@/components/AdminAnalyticsPanel";
+import AdminAdsterraStats from "@/components/AdminAdsterraStats";
 import AdminShell, { type AdminNavItem } from "@/components/AdminShell";
 import {
   ADSTERRA_BANNER_SLOTS,
@@ -32,6 +33,7 @@ interface AdminAdsPanelProps {
 
 const NAV: AdminNavItem[] = [
   { id: "traffic", label: "Traffic" },
+  { id: "adsterra-stats", label: "Adsterra stats" },
   { id: "site", label: "Site" },
   { id: "feed", label: "Video feed" },
   { id: "vpn", label: "VPN wall" },
@@ -50,7 +52,17 @@ const labelCls = "block text-sm text-ink-300";
 
 export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
   const router = useRouter();
-  const [config, setConfig] = useState<AdsConfig>(initial);
+  const [config, setConfig] = useState<AdsConfig>(() => ({
+    ...initial,
+    adsterra: {
+      ...initial.adsterra,
+      apiKey: "",
+    },
+  }));
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [apiKeySet, setApiKeySet] = useState(
+    Boolean((initial.adsterra as { apiKeySet?: boolean })?.apiKeySet || initial.adsterra?.apiKey),
+  );
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<AdSlotId | null>(null);
@@ -289,18 +301,36 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
     setSaving(true);
     setStatus("");
     try {
+      const payload = {
+        ...config,
+        adsterra: {
+          ...config.adsterra,
+          // Only send a new key when the admin typed one; empty keeps existing.
+          apiKey: apiKeyDraft.trim(),
+        },
+      };
       const res = await fetch(adminApiUrl("/ads"), {
         method: "PUT",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         setStatus("Save failed");
         return;
       }
-      const saved = (await res.json()) as AdsConfig;
-      setConfig(saved);
+      const saved = (await res.json()) as AdsConfig & {
+        adsterra: AdsConfig["adsterra"] & { apiKeySet?: boolean };
+      };
+      setConfig({
+        ...saved,
+        adsterra: { ...saved.adsterra, apiKey: "" },
+      });
+      if (apiKeyDraft.trim()) setApiKeySet(true);
+      if (typeof saved.adsterra?.apiKeySet === "boolean") {
+        setApiKeySet(saved.adsterra.apiKeySet);
+      }
+      setApiKeyDraft("");
       setStatus("Saved");
       router.refresh();
     } catch {
@@ -315,7 +345,7 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
     router.refresh();
   }
 
-  const showSave = section !== "traffic";
+  const showSave = section !== "traffic" && section !== "adsterra-stats";
 
   return (
     <AdminShell
@@ -344,6 +374,12 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
     >
       <form onSubmit={onSave} className="mx-auto max-w-3xl space-y-4 pb-16">
         {section === "traffic" && <AdminAnalyticsPanel />}
+
+        {section === "adsterra-stats" && (
+          <section className={panel}>
+            <AdminAdsterraStats />
+          </section>
+        )}
 
         {section === "site" && (
           <section className={panel}>
@@ -969,6 +1005,21 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                 Add script
               </button>
             </div>
+
+            <label className={`mt-4 ${labelCls}`}>
+              Publisher API key
+              <input
+                type="password"
+                value={apiKeyDraft}
+                onChange={(e) => setApiKeyDraft(e.target.value)}
+                placeholder={apiKeySet ? "•••••••• (saved — paste to replace)" : "Paste Adsterra API token"}
+                autoComplete="off"
+                className={field}
+              />
+              <span className="mt-1 block text-xs text-ink-500">
+                From Adsterra → Settings → API. Or set ADSTERRA_API_KEY in .env
+              </span>
+            </label>
 
             <div className="mt-4 space-y-3">
               {config.adsterra.scripts.map((script, index) => (

@@ -20,9 +20,21 @@ export async function GET(request: Request) {
   if (!gate.ok) return gate.response;
 
   const config = await readAdsConfig();
-  return NextResponse.json(config, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  const apiKeySet = Boolean(
+    config.adsterra?.apiKey?.trim() || process.env.ADSTERRA_API_KEY?.trim(),
+  );
+  // Never send the raw API key to the browser.
+  return NextResponse.json(
+    {
+      ...config,
+      adsterra: {
+        ...config.adsterra,
+        apiKey: "",
+        apiKeySet,
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function PUT(request: Request) {
@@ -139,7 +151,14 @@ export async function PUT(request: Request) {
     },
     banners,
     network,
-    adsterra: body.adsterra ?? current.adsterra,
+    adsterra: (() => {
+      const incoming = body.adsterra ?? current.adsterra;
+      const typedKey =
+        typeof body.adsterra?.apiKey === "string" ? body.adsterra.apiKey.trim() : "";
+      // Empty field on save = keep existing key (UI never reloads the secret).
+      const apiKey = typedKey || current.adsterra?.apiKey || "";
+      return { ...incoming, apiKey };
+    })(),
     vpnWall: {
       enabled: Boolean(body.vpnWall?.enabled ?? current.vpnWall.enabled),
       blockedCountries: Array.isArray(body.vpnWall?.blockedCountries)
@@ -184,7 +203,18 @@ export async function PUT(request: Request) {
 
   invalidateVpnWallConfigCache();
 
-  return NextResponse.json(saved, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  const apiKeySet = Boolean(
+    saved.adsterra?.apiKey?.trim() || process.env.ADSTERRA_API_KEY?.trim(),
+  );
+  return NextResponse.json(
+    {
+      ...saved,
+      adsterra: {
+        ...saved.adsterra,
+        apiKey: "",
+        apiKeySet,
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

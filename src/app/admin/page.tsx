@@ -13,5 +13,19 @@ export default async function AdminPage() {
   }
 
   const config = await readAdsConfig();
-  return <AdminAdsPanel initial={config} />;
+  const apiKeySet = Boolean(
+    config.adsterra?.apiKey?.trim() || process.env.ADSTERRA_API_KEY?.trim(),
+  );
+  return (
+    <AdminAdsPanel
+      initial={{
+        ...config,
+        adsterra: {
+          ...config.adsterra,
+          apiKey: "",
+          ...( { apiKeySet } as { apiKeySet?: boolean }),
+        },
+      }}
+    />
+  );
 }
