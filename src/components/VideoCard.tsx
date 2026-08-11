@@ -18,28 +18,16 @@ const SCRUB_INTERVAL_MS = 600;
 /** Wait before cycling frames so quick hover/scroll does not flood the CDN. */
 const SCRUB_DWELL_MS = 180;
 
-function prefetchEmbed(url: string | undefined) {
-  if (!url || typeof document === "undefined") return;
-  const id = `prefetch-embed-${url}`;
-  if (document.getElementById(id)) return;
-  try {
-    const origin = new URL(url).origin;
-    if (!document.getElementById(`preconnect-${origin}`)) {
-      const pc = document.createElement("link");
-      pc.id = `preconnect-${origin}`;
-      pc.rel = "preconnect";
-      pc.href = origin;
-      pc.crossOrigin = "anonymous";
-      document.head.appendChild(pc);
-    }
-  } catch {
-    return;
-  }
+function prefetchPlayback(id: string | undefined) {
+  if (!id || typeof document === "undefined") return;
+  const idKey = `prefetch-playback-${id}`;
+  if (document.getElementById(idKey)) return;
   const link = document.createElement("link");
-  link.id = id;
+  link.id = idKey;
   link.rel = "prefetch";
-  link.href = url;
-  link.as = "document";
+  link.href = `/api/playback/${encodeURIComponent(id)}`;
+  link.as = "fetch";
+  link.setAttribute("crossorigin", "use-credentials");
   document.head.appendChild(link);
 }
 
@@ -67,7 +55,7 @@ export default function VideoCard({ video, priority = false, categories }: Props
   };
 
   const startScrub = () => {
-    prefetchEmbed(video.embed);
+    prefetchPlayback(video.id);
     if (intervalRef.current || dwellRef.current || frames.length < 2) return;
     // Touch / coarse pointers don't get hover scrub — saves bandwidth while scrolling.
     if (
@@ -100,7 +88,7 @@ export default function VideoCard({ video, priority = false, categories }: Props
       onMouseLeave={stopScrub}
       onFocus={startScrub}
       onBlur={stopScrub}
-      onTouchStart={() => prefetchEmbed(video.embed)}
+      onTouchStart={() => prefetchPlayback(video.id)}
     >
       {/* Sibling of the link, not a child: a <button> inside an <a> is invalid
           HTML and breaks keyboard navigation. Positioned against the article,

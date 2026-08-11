@@ -160,7 +160,12 @@ export default async function VideoPage({ params }: PageProps) {
       <WatchHistoryRecorder video={video} />
 
       <div>
-        <VideoEmbed src={video.embed} title={video.title} poster={video.default_thumb?.src} />
+        <VideoEmbed
+          id={video.id}
+          embedSrc={video.embed}
+          title={video.title}
+          poster={video.default_thumb?.src}
+        />
 
         <h1 className="mt-4 text-lg leading-snug font-bold text-ink-100 sm:text-xl">
           {video.title}
