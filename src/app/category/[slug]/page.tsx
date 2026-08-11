@@ -93,7 +93,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           query={category.query}
           order={order}
           batchSize={BATCH_SIZE}
-          priorityCount={6}
+          priorityCount={4}
           categories={ads.feed.categories}
         />
       )}

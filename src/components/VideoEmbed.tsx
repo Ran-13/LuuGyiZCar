@@ -10,23 +10,17 @@ interface Props {
   poster?: string;
 }
 
-/** How long to wait for the iframe to signal load before offering a retry. */
-const LOAD_TIMEOUT_MS = 9000;
+/** How long to wait before offering a retry if the frame never settles. */
+const LOAD_TIMEOUT_MS = 7000;
 
 /**
  * Eporner embed iframe, with a poster and a manual retry.
  *
- * Two deliberate choices:
- *
- * - `referrerPolicy` sends the origin. With `no-referrer` the embed CDN cannot
- *   authorise the play session and blanks the frame — reliably reproducible on
- *   iOS Safari while desktop still worked.
- * - The retry control is always available once loading finishes. A cross-origin
- *   iframe that loads a blank page still fires `onLoad` and never fires
- *   `onError`, so the parent page genuinely cannot detect the white-frame case.
- *   Privacy blocking (Safari ITP, Brave shields, ad blockers) causes it and is
- *   outside this page's control, so the honest fix is to let the viewer reload
- *   the player rather than pretend we can auto-detect it.
+ * Speed notes:
+ * - The iframe is visible immediately (not opacity-0 until onLoad). Waiting for
+ *   onLoad hid the player until Eporner's own page+ads finished — felt stuck.
+ * - Poster covers the frame until load, then fades so there is never a blank box.
+ * - referrerPolicy must send the origin; no-referrer blanks the player on iOS.
  */
 export default function VideoEmbed({ src, title, poster }: Props) {
   const [attempt, setAttempt] = useState(0);
@@ -35,12 +29,34 @@ export default function VideoEmbed({ src, title, poster }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // setState lands in a timer callback, not the effect body.
+    // Warm the embed origin as soon as the player mounts (video route only).
+    try {
+      const origin = new URL(src).origin;
+      const ensure = (rel: string) => {
+        const id = `vid-${rel}-${origin}`;
+        if (document.getElementById(id)) return;
+        const link = document.createElement("link");
+        link.id = id;
+        link.rel = rel;
+        link.href = origin;
+        if (rel === "preconnect") link.crossOrigin = "anonymous";
+        document.head.appendChild(link);
+      };
+      ensure("dns-prefetch");
+      ensure("preconnect");
+    } catch {
+      /* bad src */
+    }
+  }, [src]);
+
+  useEffect(() => {
+    setLoaded(false);
+    setTimedOut(false);
     timer.current = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [attempt]);
+  }, [attempt, src]);
 
   const reload = () => {
     setLoaded(false);
@@ -51,47 +67,50 @@ export default function VideoEmbed({ src, title, poster }: Props) {
   // Cache-bust retries so a failed session is not replayed from cache.
   const frameSrc = attempt === 0 ? src : `${src}${src.includes("?") ? "&" : "?"}r=${attempt}`;
 
-  // Owns the aspect box so the controls can live *outside* the iframe. Overlaying
-  // them would swallow clicks meant for the provider's own player controls.
   return (
     <>
-      <div className="relative mx-auto aspect-video w-full max-w-[calc(82vh*16/9)] overflow-hidden rounded-lg bg-ink-900">
-      {/* Poster sits underneath: the frame shows artwork instantly instead of a
-          white or black box, and this image is already cached from the grid. */}
-      {poster && !loaded && (
-        // eslint-disable-next-line @next/next/no-img-element -- remote CDN thumbnail
-        <img
-          src={poster}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover opacity-60 blur-[1px]"
+      <div className="relative mx-auto aspect-video w-full max-w-[calc(82vh*16/9)] overflow-hidden rounded-lg bg-black">
+        {/* Iframe starts visible so Eporner's own loader/player can paint ASAP. */}
+        <iframe
+          key={attempt}
+          src={frameSrc}
+          title={title}
+          className="absolute inset-0 h-full w-full border-0 bg-black"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          loading="eager"
+          {...{ fetchPriority: "high" }}
+          onLoad={() => {
+            setLoaded(true);
+            if (timer.current) clearTimeout(timer.current);
+          }}
         />
-      )}
 
-      {!loaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="h-9 w-9 animate-spin rounded-full border-2 border-white/25 border-t-brand-500" />
-        </div>
-      )}
-
-      <iframe
-        key={attempt}
-        src={frameSrc}
-        title={title}
-        className={`absolute inset-0 h-full w-full border-0 transition-opacity duration-300 ${
-          loaded ? "bg-black opacity-100" : "opacity-0"
-        }`}
-        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
-        loading="eager"
-        onLoad={() => setLoaded(true)}
-      />
-
+        {/* Poster + spinner only until the embed document fires load. */}
+        {!loaded && (
+          <div className="pointer-events-none absolute inset-0 z-[1]">
+            {poster ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote CDN thumbnail
+              <img
+                src={poster}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 h-full w-full object-cover opacity-70"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-ink-900" />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+              <span className="h-9 w-9 animate-spin rounded-full border-2 border-white/25 border-t-brand-500" />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Below the player, never over it. Shown once the frame reports loaded
-          (which covers the blank-player case) or when it never reported at all. */}
       {(loaded || timedOut) && (
         <div className="mx-auto mt-2 flex max-w-[calc(82vh*16/9)] items-center justify-end gap-2">
           {timedOut && !loaded && (

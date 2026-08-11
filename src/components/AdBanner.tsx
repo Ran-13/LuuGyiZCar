@@ -11,7 +11,7 @@ interface AdBannerProps {
   className?: string;
   /** Stick to the bottom of the viewport (outside scroll flow). */
   sticky?: boolean;
-  /** Load eagerly (above-the-fold banners). Default true. */
+  /** Eager + high fetch priority — only for the true above-the-fold banner. */
   priority?: boolean;
 }
 
@@ -31,7 +31,7 @@ export default function AdBanner({
   banner,
   className = "",
   sticky = false,
-  priority = true,
+  priority = false,
 }: AdBannerProps) {
   const pathname = usePathname();
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
@@ -99,6 +99,8 @@ export default function AdBanner({
 
   const src = attempt === 0 ? imageUrl : `${imageUrl}${imageUrl.includes("?") ? "&" : "?"}r=${attempt}`;
   const hideShell = status !== "ready";
+  // Sticky bars must never compete with LCP thumbs / the player poster.
+  const eager = priority && !sticky;
 
   const image = (
     // eslint-disable-next-line @next/next/no-img-element -- GIF ads + arbitrary upload URLs
@@ -108,9 +110,9 @@ export default function AdBanner({
       src={src}
       alt=""
       className="w-full object-fill sm:max-h-28"
-      loading={priority ? "eager" : "lazy"}
+      loading={eager ? "eager" : "lazy"}
       decoding="async"
-      fetchPriority={priority ? "high" : "auto"}
+      fetchPriority={eager ? "high" : "low"}
       onLoad={() => setStatus("ready")}
       onError={handleFailure}
     />
@@ -156,8 +158,8 @@ export default function AdBanner({
     <aside
       aria-label="Advertisement"
       aria-hidden={hideShell}
-      className={`overflow-hidden ${className} ${
-        hideShell ? "pointer-events-none absolute h-0 w-0 opacity-0" : ""
+      className={`min-h-[4.5rem] overflow-hidden sm:min-h-[7rem] ${className} ${
+        hideShell ? "pointer-events-none opacity-0" : ""
       }`}
     >
       {inner}

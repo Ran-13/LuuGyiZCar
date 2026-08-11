@@ -77,7 +77,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           query={query}
           order={order}
           batchSize={BATCH_SIZE}
-          priorityCount={6}
+          priorityCount={4}
           categories={ads.feed.categories}
         />
       )}

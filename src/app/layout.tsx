@@ -53,24 +53,22 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const ads = await readAdsConfig();
 
-  // Collect all enabled banner image URLs for preloading in <head>
-  const bannerUrls = Object.values(ads.banners)
-    .filter((b) => b.enabled && b.imageUrl)
-    .map((b) => b.imageUrl);
+  // Only warm the sticky bar (sitewide). Home-top / video-mid preload on their pages.
+  const stickyBanner = ads.banners["home-bottom"];
+  const stickyPreload =
+    stickyBanner?.enabled && stickyBanner.imageUrl ? stickyBanner.imageUrl : null;
 
   return (
     <html lang="en" className="h-full antialiased">
       <head>
-        {/* DNS prefetch + preconnect for video thumbnail CDN */}
+        {/* DNS prefetch + preconnect for thumbnails + embed player */}
         <link rel="dns-prefetch" href="https://static-ca-cdn.eporner.com" />
         <link rel="preconnect" href="https://static-ca-cdn.eporner.com" crossOrigin="anonymous" />
-        {/* Preload all enabled banner GIFs — browser fetches before body parse */}
-        {/* Warmed, not prioritised. These GIFs are decorative and often large;
-            at fetchPriority="high" they competed with the first row of video
-            thumbnails for bandwidth and pushed back the LCP image. */}
-        {bannerUrls.map((url) => (
-          <link key={url} rel="preload" href={url} as="image" fetchPriority="low" />
-        ))}
+        <link rel="dns-prefetch" href="https://www.eporner.com" />
+        <link rel="preconnect" href="https://www.eporner.com" crossOrigin="anonymous" />
+        {stickyPreload ? (
+          <link rel="preload" href={stickyPreload} as="image" fetchPriority="low" />
+        ) : null}
       </head>
       <body className="flex min-h-full flex-col bg-ink-950">
         <Header siteName={ads.site.siteName} categories={ads.feed.categories} />
@@ -83,7 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           categories={ads.feed.categories}
         />
         {/* Own GIF sticky — viewport-fixed on every public page including video details. */}
-        <AdBanner banner={ads.banners["home-bottom"]} sticky />
+        <AdBanner banner={ads.banners["home-bottom"]} sticky priority={false} />
         <ExoClickInPagePush network={ads.network} />
         <ExoClickStickyBanner network={ads.network} />
         <ExoClickPopunder network={ads.network} />

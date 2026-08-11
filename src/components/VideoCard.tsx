@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { VideoSummary } from "@/lib/eporner";
 import { formatAdded, formatViews } from "@/lib/eporner";
 import { detectCategoryLabel, type Category } from "@/lib/categories";
@@ -15,27 +15,76 @@ interface Props {
 }
 
 const SCRUB_INTERVAL_MS = 600;
+/** Wait before cycling frames so quick hover/scroll does not flood the CDN. */
+const SCRUB_DWELL_MS = 180;
+
+function prefetchEmbed(url: string | undefined) {
+  if (!url || typeof document === "undefined") return;
+  const id = `prefetch-embed-${url}`;
+  if (document.getElementById(id)) return;
+  try {
+    const origin = new URL(url).origin;
+    if (!document.getElementById(`preconnect-${origin}`)) {
+      const pc = document.createElement("link");
+      pc.id = `preconnect-${origin}`;
+      pc.rel = "preconnect";
+      pc.href = origin;
+      pc.crossOrigin = "anonymous";
+      document.head.appendChild(pc);
+    }
+  } catch {
+    return;
+  }
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "prefetch";
+  link.href = url;
+  link.as = "document";
+  document.head.appendChild(link);
+}
 
 export default function VideoCard({ video, priority = false, categories }: Props) {
   const frames = video.thumbs?.length ? video.thumbs : [video.default_thumb];
   const [frame, setFrame] = useState(0);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dwellRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const categoryLabel = detectCategoryLabel(video.keywords ?? "", categories);
 
-  const stopScrub = () => {
-    if (timer.current) {
-      clearInterval(timer.current);
-      timer.current = null;
+  const clearTimers = () => {
+    if (dwellRef.current) {
+      clearTimeout(dwellRef.current);
+      dwellRef.current = null;
     }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const stopScrub = () => {
+    clearTimers();
     setFrame(0);
   };
 
   const startScrub = () => {
-    if (timer.current || frames.length < 2) return;
-    timer.current = setInterval(() => {
-      setFrame((f) => (f + 1) % frames.length);
-    }, SCRUB_INTERVAL_MS);
+    prefetchEmbed(video.embed);
+    if (intervalRef.current || dwellRef.current || frames.length < 2) return;
+    // Touch / coarse pointers don't get hover scrub — saves bandwidth while scrolling.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(hover: none), (pointer: coarse)").matches
+    ) {
+      return;
+    }
+    dwellRef.current = setTimeout(() => {
+      dwellRef.current = null;
+      intervalRef.current = setInterval(() => {
+        setFrame((f) => (f + 1) % frames.length);
+      }, SCRUB_INTERVAL_MS);
+    }, SCRUB_DWELL_MS);
   };
+
+  useEffect(() => () => clearTimers(), []);
 
   const added = formatAdded(video.added);
   const src = frames[frame]?.src ?? video.default_thumb?.src;
@@ -51,6 +100,7 @@ export default function VideoCard({ video, priority = false, categories }: Props
       onMouseLeave={stopScrub}
       onFocus={startScrub}
       onBlur={stopScrub}
+      onTouchStart={() => prefetchEmbed(video.embed)}
     >
       {/* Sibling of the link, not a child: a <button> inside an <a> is invalid
           HTML and breaks keyboard navigation. Positioned against the article,

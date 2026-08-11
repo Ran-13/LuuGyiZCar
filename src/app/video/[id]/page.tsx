@@ -23,6 +23,7 @@ import {
   searchVideos,
   toIsoDate,
   toIsoDuration,
+  type EpornerVideo,
 } from "@/lib/eporner";
 import { absoluteUrl } from "@/lib/site";
 
@@ -56,11 +57,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-/**
- * The related query depends on tags parsed from the video, so this fetch is
- * genuinely sequential after `getVideoById`. Isolating it behind Suspense lets
- * the player paint after the first call instead of waiting for both.
- */
 async function RelatedSection({
   query,
   currentId,
@@ -92,21 +88,43 @@ async function RelatedSection({
   );
 }
 
+/** Ads + related — deferred so the player HTML streams first. */
+async function VideoBelowFold({ video }: { video: EpornerVideo }) {
+  const ads = await readAdsConfig();
+  const tags = parseKeywords(video.keywords);
+  const relatedQuery = tags[0] ?? ads.feed.relatedFallbackQuery;
+
+  return (
+    <>
+      <AdBanner banner={ads.banners["video-mid"]} className="mt-5" />
+      <ExoClickZone network={ads.network} slot="net-video-below" className="mt-5" />
+      <AdsterraBanner adsterra={ads.adsterra} slot="ads-video-below" className="mt-5" />
+
+      <section className="mt-12">
+        <SectionHeading title="Related Videos" subtitle={`More in “${relatedQuery}”`} />
+        <ExoClickZone network={ads.network} slot="net-video-native" className="mb-5 w-full" />
+        <Suspense fallback={<GridSkeleton count={RELATED_BATCH} />}>
+          <RelatedSection
+            query={relatedQuery}
+            currentId={video.id}
+            categories={ads.feed.categories}
+          />
+        </Suspense>
+      </section>
+    </>
+  );
+}
+
 export default async function VideoPage({ params }: PageProps) {
   const { id } = await params;
-  const [video, ads] = await Promise.all([getVideoById(id), readAdsConfig()]);
+  // Do not await ads here — player must paint as soon as video metadata is ready.
+  const video = await getVideoById(id);
   if (!video) notFound();
 
   const tags = parseKeywords(video.keywords);
-
-  // Related videos key off the first usable tag; falls back to site feed setting.
-  const relatedQuery = tags[0] ?? ads.feed.relatedFallbackQuery;
-
   const rating = formatRating(video.rate);
   const added = formatAdded(video.added);
 
-  // schema.org VideoObject — what produces thumbnail + duration rich results.
-  // Optional fields are omitted rather than emitted empty, which validators flag.
   const uploadDate = toIsoDate(video.added);
   const duration = toIsoDuration(video.length_sec);
   const jsonLd = {
@@ -129,17 +147,19 @@ export default async function VideoPage({ params }: PageProps) {
 
   return (
     <>
+      {/* Warm embed host before the iframe request races ads/thumbs. */}
+      <link rel="dns-prefetch" href="https://www.eporner.com" />
+      <link rel="preconnect" href="https://www.eporner.com" crossOrigin="anonymous" />
+      {video.embed ? <link rel="prefetch" href={video.embed} as="document" /> : null}
+
       <script
         type="application/ld+json"
-        // Values come from the upstream API, so they are serialized, never interpolated raw.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       <WatchHistoryRecorder video={video} />
 
       <div>
-        {/* VideoEmbed owns the aspect box (full width, capped at 82vh tall) so its
-            reload controls can sit below the frame rather than over it. */}
         <VideoEmbed src={video.embed} title={video.title} poster={video.default_thumb?.src} />
 
         <h1 className="mt-4 text-lg leading-snug font-bold text-ink-100 sm:text-xl">
@@ -181,26 +201,18 @@ export default async function VideoPage({ params }: PageProps) {
             </div>
           </section>
         )}
-
-        <AdBanner banner={ads.banners["video-mid"]} className="mt-5" />
-
-        <ExoClickZone network={ads.network} slot="net-video-below" className="mt-5" />
-        <AdsterraBanner adsterra={ads.adsterra} slot="ads-video-below" className="mt-5" />
       </div>
 
-      <section className="mt-12">
-        {/* Heading renders immediately; only the grid waits on the second fetch. */}
-        <SectionHeading title="Related Videos" subtitle={`More in “${relatedQuery}”`} />
-        {/* Native / recommendation widget — blends under the related heading, not a tall banner. */}
-        <ExoClickZone network={ads.network} slot="net-video-native" className="mb-5 w-full" />
-        <Suspense fallback={<GridSkeleton count={RELATED_BATCH} />}>
-          <RelatedSection
-            query={relatedQuery}
-            currentId={video.id}
-            categories={ads.feed.categories}
-          />
-        </Suspense>
-      </section>
+      <Suspense
+        fallback={
+          <div className="mt-12">
+            <div className="mb-4 h-6 w-40 animate-pulse rounded bg-ink-800" />
+            <GridSkeleton count={12} />
+          </div>
+        }
+      >
+        <VideoBelowFold video={video} />
+      </Suspense>
     </>
   );
 }

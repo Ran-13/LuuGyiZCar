@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 /**
  * Eporner public API v2 client.
  *
@@ -140,7 +142,8 @@ export async function searchVideos({
   page = 1,
   perPage = 24,
   order = DEFAULT_ORDER,
-  thumbsize = "big",
+  // Medium thumbs are enough for grid cards and cut CDN + optimizer work a lot.
+  thumbsize = "medium",
 }: SearchParams): Promise<SearchResult> {
   const safePage = clampPage(page);
   const safePerPage = Math.min(Math.max(perPage, 1), 100);
@@ -179,7 +182,7 @@ export async function searchVideos({
   }
 }
 
-export async function getVideoById(
+export const getVideoById = cache(async function getVideoById(
   id: string,
   thumbsize: ThumbSize = "big",
 ): Promise<EpornerVideo | null> {
@@ -202,7 +205,7 @@ export async function getVideoById(
     console.error(`[eporner] id lookup error for id="${id}"`, err);
     return null;
   }
-}
+});
 
 /**
  * A video with the bulky fields optional.

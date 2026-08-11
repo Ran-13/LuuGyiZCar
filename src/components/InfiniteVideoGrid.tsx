@@ -22,7 +22,7 @@ interface Props {
 }
 
 /** Start fetching before the sentinel is actually on screen. */
-const PREFETCH_MARGIN = "800px";
+const PREFETCH_MARGIN = "400px";
 
 export default function InfiniteVideoGrid({
   initialVideos,
