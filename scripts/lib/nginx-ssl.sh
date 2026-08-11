@@ -16,7 +16,6 @@ install_luugyi_ssl() {
   local uploads="$4"
   local repo_root="${5:-$_LUUGYI_SSL_REPO_ROOT}"
 
-  # Normalize domain
   domain="${domain#http://}"
   domain="${domain#https://}"
   domain="${domain%%/*}"
@@ -33,7 +32,6 @@ install_luugyi_ssl() {
   fi
   if [[ ! -f "$template" ]]; then
     echo "Missing nginx template: $template"
-    echo "  repo_root=$repo_root"
     return 1
   fi
 
@@ -45,18 +43,61 @@ install_luugyi_ssl() {
       /etc/nginx/nginx.conf
   fi
 
+  # Safe vhost render in Python — never use sed ranges that can wipe the file.
   _write_http_vhost() {
-    sed "s|YOUR-DOMAIN.com|${domain}|g; s/8082/${port}/g; s|UPLOADS_ROOT|${uploads}|g" \
-      "$template" > "$available"
-    if grep -q "proxy_cache_path" "$available"; then
-      sed -i '/proxy_cache_path/,/use_temp_path=off;/d' "$available"
-    fi
-    # Always force server_name (works even if template placeholder differs).
-    if grep -qE '^[[:space:]]*server_name[[:space:]]+' "$available"; then
-      sed -i -E "s|^[[:space:]]*server_name[[:space:]].*;|    server_name ${domain} www.${domain};|" "$available"
-    else
-      sed -i "/listen \[::\]:80;/a\\    server_name ${domain} www.${domain};" "$available"
-    fi
+    python3 - "$template" "$available" "$domain" "$port" "$uploads" <<'PY'
+import pathlib, re, sys
+
+template, available, domain, port, uploads = sys.argv[1:6]
+text = pathlib.Path(template).read_text()
+
+# Restore placeholder if a previous run corrupted the template copy text
+# (only affects this render; we do not write back to the template).
+if "YOUR-DOMAIN.com" not in text and "server_name" in text:
+    # Template may already be domain-substituted; still force names below.
+    pass
+
+text = text.replace("YOUR-DOMAIN.com", domain)
+text = text.replace("8082", str(port))
+text = text.replace("UPLOADS_ROOT", uploads)
+
+# Drop proxy_cache_path ONLY if both ends exist nearby (max ~5 lines).
+text = re.sub(
+    r"(?m)^[ \t]*proxy_cache_path[^\n]*\n(?:[ \t]+[^\n]*\n){0,4}[ \t]*max_size[^\n]*use_temp_path=off;\s*",
+    "",
+    text,
+)
+text = re.sub(
+    r"(?m)^[ \t]*proxy_cache_path[^\n]*use_temp_path=off;\s*",
+    "",
+    text,
+)
+
+# Force correct server_name
+if re.search(r"(?m)^[ \t]*server_name[ \t]", text):
+    text = re.sub(
+        r"(?m)^[ \t]*server_name[ \t].*;",
+        f"    server_name {domain} www.{domain};",
+        text,
+        count=1,
+    )
+else:
+    text = re.sub(
+        r"(?m)^([ \t]*listen \[::\]:80;)",
+        rf"\1\n    server_name {domain} www.{domain};",
+        text,
+        count=1,
+    )
+
+if "server {" not in text or f"server_name {domain}" not in text:
+    raise SystemExit(
+        "Rendered vhost missing server block or server_name. "
+        f"template={template} chars={len(text)}"
+    )
+
+pathlib.Path(available).write_text(text)
+print(f"    wrote {available} ({len(text)} bytes)")
+PY
   }
 
   echo "==> Writing HTTP vhost luugyi-$name"
@@ -73,7 +114,7 @@ install_luugyi_ssl() {
     head -n 40 "$available" || true
     return 1
   fi
-  echo "    OK server_name: $(grep -E 'server_name' "$available" | head -1 | xargs)"
+  echo "    OK: $(grep -E '[[:space:]]*server_name' "$available" | head -1 | xargs)"
 
   ln -sfn "$available" "$enabled"
   nginx -t
@@ -84,7 +125,6 @@ install_luugyi_ssl() {
     return 0
   fi
 
-  # Prefer an already-issued cert (certbot may have saved it earlier).
   local live="/etc/letsencrypt/live/$domain"
   if [[ ! -f "$live/fullchain.pem" ]]; then
     echo "==> Obtaining certificate for ${domain}"
@@ -112,20 +152,27 @@ install_luugyi_ssl() {
     return 1
   fi
 
-  echo "==> Wiring SSL into luugyi-$name (manual — avoids wrong default cert)"
+  echo "==> Wiring SSL into luugyi-$name"
   python3 - "$template" "$available" "$domain" "$port" "$uploads" "$live" <<'PY'
 import pathlib, re, sys
 
 template, available, domain, port, uploads, live = sys.argv[1:7]
 text = pathlib.Path(template).read_text()
 text = text.replace("YOUR-DOMAIN.com", domain)
-text = text.replace("8082", port)
+text = text.replace("8082", str(port))
 text = text.replace("UPLOADS_ROOT", uploads)
-text = re.sub(r"proxy_cache_path[\s\S]*?use_temp_path=off;\s*", "", text)
+text = re.sub(
+    r"(?m)^[ \t]*proxy_cache_path[^\n]*\n(?:[ \t]+[^\n]*\n){0,4}[ \t]*max_size[^\n]*use_temp_path=off;\s*",
+    "",
+    text,
+)
+text = re.sub(
+    r"(?m)^[ \t]*proxy_cache_path[^\n]*use_temp_path=off;\s*",
+    "",
+    text,
+)
 text = text.replace("listen 80;", "listen 443 ssl http2;")
 text = text.replace("listen [::]:80;", "listen [::]:443 ssl http2;")
-
-# Force a clean server_name line
 text = re.sub(
     r"(?m)^[ \t]*server_name[ \t].*;",
     f"    server_name {domain} www.{domain};",
@@ -152,14 +199,7 @@ for line in lines:
         inserted = True
 
 if not inserted:
-    # Fallback: insert after first listen 443 line
-    out = []
-    for line in lines:
-        out.append(line)
-        if (not inserted) and "listen 443" in line:
-            out.append(f"    server_name {domain} www.{domain};")
-            out.extend(ssl)
-            inserted = True
+    raise SystemExit("Could not insert ssl_certificate after server_name")
 
 redirect = f"""# Redirect HTTP → HTTPS
 server {{
@@ -171,6 +211,7 @@ server {{
 
 """
 pathlib.Path(available).write_text(redirect + "\n".join(out) + "\n")
+print(f"    SSL vhost written ({len(out)} lines)")
 PY
 
   ln -sfn "$available" "$enabled"
