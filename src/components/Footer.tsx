@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isAdminUiPath } from "@/lib/admin-path";
-import { CATEGORIES } from "@/lib/categories";
+import type { Category } from "@/lib/categories";
 
 export default function Footer({
   siteName,
   siteDescription,
+  categories,
 }: {
   siteName: string;
   siteDescription: string;
+  categories: Category[];
 }) {
   const pathname = usePathname();
   if (isAdminUiPath(pathname)) return null;
@@ -19,7 +21,7 @@ export default function Footer({
     <footer className="mt-16 border-t border-ink-700 bg-ink-900">
       <div className="mx-auto max-w-[1600px] px-4 py-10">
         <nav aria-label="Categories" className="flex flex-wrap gap-x-4 gap-y-2">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/category/${cat.slug}`}

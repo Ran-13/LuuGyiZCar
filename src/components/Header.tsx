@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import { isAdminUiPath } from "@/lib/admin-path";
-import { CATEGORIES } from "@/lib/categories";
+import type { Category } from "@/lib/categories";
 import { splitSiteName } from "@/lib/site-brand";
 import SearchBar from "./SearchBar";
 
@@ -14,7 +14,13 @@ const LIBRARY_LINKS = [
   { href: "/history", label: "Watch history", Icon: History },
 ] as const;
 
-export default function Header({ siteName }: { siteName: string }) {
+export default function Header({
+  siteName,
+  categories,
+}: {
+  siteName: string;
+  categories: Category[];
+}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const brand = splitSiteName(siteName);
@@ -51,7 +57,7 @@ export default function Header({ siteName }: { siteName: string }) {
 
         {/* Desktop category rail sits inline with the logo to keep the bar to one row. */}
         <nav className="no-scrollbar hidden min-w-0 flex-1 gap-0.5 overflow-x-auto lg:flex">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const active = pathname === `/category/${cat.slug}`;
             return (
               <Link
@@ -105,7 +111,7 @@ export default function Header({ siteName }: { siteName: string }) {
       {menuOpen && (
         <nav className="border-t border-ink-700 bg-ink-900 px-3 py-2 lg:hidden">
           <ul className="grid grid-cols-2 gap-1 sm:grid-cols-4">
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const active = pathname === `/category/${cat.slug}`;
               return (
                 <li key={cat.slug}>

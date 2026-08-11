@@ -7,7 +7,8 @@ export interface Category {
   description: string;
 }
 
-export const CATEGORIES: Category[] = [
+/** Built-in defaults — used until a site overrides `feed.categories` in admin. */
+export const DEFAULT_CATEGORIES: Category[] = [
   {
     slug: "myanmar",
     label: "Myanmar",
@@ -70,6 +71,40 @@ export const CATEGORIES: Category[] = [
   },
 ];
 
+/** @deprecated Prefer site feed categories from readAdsConfig().feed.categories */
+export const CATEGORIES = DEFAULT_CATEGORIES;
+
+export function slugifyCategory(label: string): string {
+  return (
+    label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "category"
+  );
+}
+
+export function getCategoryFromList(
+  categories: Category[],
+  slug: string,
+): Category | undefined {
+  return categories.find((c) => c.slug === slug);
+}
+
 export function getCategory(slug: string): Category | undefined {
-  return CATEGORIES.find((c) => c.slug === slug);
+  return getCategoryFromList(DEFAULT_CATEGORIES, slug);
+}
+
+/** Pick the first keyword that matches a known category query. */
+export function detectCategoryLabel(
+  keywords: string,
+  categories: Category[] = DEFAULT_CATEGORIES,
+): string | null {
+  if (!keywords) return null;
+  const kw = keywords.toLowerCase();
+  for (const cat of categories) {
+    if (kw.includes(cat.query.toLowerCase())) return cat.label;
+  }
+  return null;
 }

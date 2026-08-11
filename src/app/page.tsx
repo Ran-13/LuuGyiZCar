@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AdBanner from "@/components/AdBanner";
+import AdsterraBanner from "@/components/AdsterraBanner";
 import AnnouncementDialog from "@/components/AnnouncementDialog";
 import EmptyState from "@/components/EmptyState";
 import ExoClickInterstitial from "@/components/ExoClickInterstitial";
@@ -8,28 +9,24 @@ import HomeAnnouncement from "@/components/HomeAnnouncement";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
 import { readAdsConfig } from "@/lib/ads";
-import { CATEGORIES } from "@/lib/categories";
-import { searchVideos } from "@/lib/eporner";
+import { isSortOrder, DEFAULT_ORDER, searchVideos } from "@/lib/eporner";
 
 export const revalidate = 60;
 
 /** Videos fetched per infinite-scroll batch. */
 const BATCH_SIZE = 24;
 
-/** Empty query = the whole catalog, which is what "trending" should draw from. */
-const FEED_QUERY = "";
-
-const FEED_ORDER = "top-weekly" as const;
-
 export default async function HomePage() {
-  const [trending, ads] = await Promise.all([
-    searchVideos({
-      query: FEED_QUERY,
-      perPage: BATCH_SIZE,
-      order: FEED_ORDER,
-    }),
-    readAdsConfig(),
-  ]);
+  const ads = await readAdsConfig();
+  const feed = ads.feed;
+  const homeOrder = isSortOrder(feed.homeOrder) ? feed.homeOrder : DEFAULT_ORDER;
+  const homeQuery = feed.homeQuery;
+
+  const trending = await searchVideos({
+    query: homeQuery,
+    perPage: BATCH_SIZE,
+    order: homeOrder,
+  });
 
   return (
     <>
@@ -43,7 +40,7 @@ export default async function HomePage() {
         aria-label="Browse categories"
         className="no-scrollbar -mx-3 mb-6 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0 lg:hidden"
       >
-        {CATEGORIES.map((cat) => (
+        {feed.categories.map((cat) => (
           <Link
             key={cat.slug}
             href={`/category/${cat.slug}`}
@@ -59,8 +56,9 @@ export default async function HomePage() {
       <AdBanner banner={ads.banners["home-top"]} className="mb-6" />
 
       <ExoClickZone network={ads.network} slot="net-home-top" className="mb-6" />
+      <AdsterraBanner adsterra={ads.adsterra} slot="ads-home-top" className="mb-6" />
 
-      <SectionHeading as="h1" title="Trending Now" subtitle="Most watched this week" />
+      <SectionHeading as="h1" title={feed.homeTitle} subtitle={feed.homeSubtitle} />
 
       {trending.failed ? (
         <EmptyState
@@ -71,14 +69,16 @@ export default async function HomePage() {
         <InfiniteVideoGrid
           initialVideos={trending.videos}
           totalPages={trending.totalPages}
-          query={FEED_QUERY}
-          order={FEED_ORDER}
+          query={homeQuery}
+          order={homeOrder}
           batchSize={BATCH_SIZE}
           priorityCount={6}
+          categories={feed.categories}
         />
       )}
 
       <ExoClickZone network={ads.network} slot="net-home-bottom" className="mt-8" />
+      <AdsterraBanner adsterra={ads.adsterra} slot="ads-home-bottom" className="mt-8" />
     </>
   );
 }

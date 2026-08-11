@@ -58,7 +58,6 @@ export default function AdminLoginForm() {
       className="mx-auto mt-16 w-full max-w-sm rounded-lg border border-ink-700 bg-ink-900 p-6"
     >
       <h1 className="text-lg font-bold text-ink-100">Admin login</h1>
-      <p className="mt-1 text-sm text-ink-400">Protected panel — authorized access only.</p>
 
       <label className="mt-5 block text-sm text-ink-300">
         Username

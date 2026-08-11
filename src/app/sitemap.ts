@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { CATEGORIES } from "@/lib/categories";
+import { readAdsConfig } from "@/lib/ads";
 import { searchVideos } from "@/lib/eporner";
 import { absoluteUrl } from "@/lib/site";
 
@@ -11,10 +11,12 @@ const VIDEOS_PER_CATEGORY = 24;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const ads = await readAdsConfig();
+  const categories = ads.feed.categories;
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: absoluteUrl("/"), lastModified: now, changeFrequency: "hourly", priority: 1 },
-    ...CATEGORIES.map((category) => ({
+    ...categories.map((category) => ({
       url: absoluteUrl(`/category/${category.slug}`),
       lastModified: now,
       changeFrequency: "daily" as const,
@@ -22,11 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  // One upstream call per category. searchVideos already swallows failures and
-  // times out at 10s, so a flaky upstream degrades the sitemap instead of
-  // failing the whole route.
   const results = await Promise.all(
-    CATEGORIES.map((category) =>
+    categories.map((category) =>
       searchVideos({
         query: category.query,
         perPage: VIDEOS_PER_CATEGORY,

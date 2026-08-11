@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import AdBanner from "@/components/AdBanner";
+import AdsterraScripts from "@/components/AdsterraScripts";
 import ExoClickInPagePush from "@/components/ExoClickInPagePush";
 import ExoClickPopunder from "@/components/ExoClickPopunder";
 import ExoClickProvider from "@/components/ExoClickProvider";
@@ -72,17 +73,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ))}
       </head>
       <body className="flex min-h-full flex-col bg-ink-950">
-        <Header siteName={ads.site.siteName} />
+        <Header siteName={ads.site.siteName} categories={ads.feed.categories} />
         <main className="w-full flex-1 px-3 py-5 sm:px-5 sm:py-7">
           {children}
         </main>
-        <Footer siteName={ads.site.siteName} siteDescription={ads.site.siteDescription} />
+        <Footer
+          siteName={ads.site.siteName}
+          siteDescription={ads.site.siteDescription}
+          categories={ads.feed.categories}
+        />
         {/* Own GIF sticky — viewport-fixed on every public page including video details. */}
         <AdBanner banner={ads.banners["home-bottom"]} sticky />
         <ExoClickInPagePush network={ads.network} />
         <ExoClickStickyBanner network={ads.network} />
         <ExoClickPopunder network={ads.network} />
         <ExoClickProvider network={ads.network} />
+        <AdsterraScripts adsterra={ads.adsterra} />
         <SiteAnalytics />
       </body>
     </html>

@@ -6,10 +6,12 @@ import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
 import SortTabs from "@/components/SortTabs";
 import { readAdsConfig } from "@/lib/ads";
-import { CATEGORIES, getCategory } from "@/lib/categories";
+import { DEFAULT_CATEGORIES, getCategoryFromList } from "@/lib/categories";
 import { DEFAULT_ORDER, isSortOrder, searchVideos } from "@/lib/eporner";
 
 export const revalidate = 900;
+/** Allow admin-added category slugs that were not in the build-time list. */
+export const dynamicParams = true;
 
 /** Videos fetched per infinite-scroll batch. */
 const BATCH_SIZE = 24;
@@ -20,12 +22,13 @@ interface PageProps {
 }
 
 export function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ slug: c.slug }));
+  return DEFAULT_CATEGORIES.map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const ads = await readAdsConfig();
+  const category = getCategoryFromList(ads.feed.categories, slug);
   if (!category) return { title: "Not found" };
 
   const path = `/category/${category.slug}`;
@@ -45,16 +48,17 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const { slug } = await params;
   const { order: rawOrder } = await searchParams;
 
-  const category = getCategory(slug);
+  const ads = await readAdsConfig();
+  const category = getCategoryFromList(ads.feed.categories, slug);
   if (!category) notFound();
 
   const order = isSortOrder(rawOrder) ? rawOrder : DEFAULT_ORDER;
 
-  // readAdsConfig is React-cached, so this adds no disk read beyond the layout's.
-  const [result, ads] = await Promise.all([
-    searchVideos({ query: category.query, perPage: BATCH_SIZE, order }),
-    readAdsConfig(),
-  ]);
+  const result = await searchVideos({
+    query: category.query,
+    perPage: BATCH_SIZE,
+    order,
+  });
 
   const subtitle =
     result.totalCount > 0
@@ -63,7 +67,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   return (
     <>
-      {/* Fires on video-card clicks from this grid. */}
       <ExoClickInterstitial network={ads.network} />
 
       <SectionHeading as="h1" title={`${category.label} Videos`} subtitle={subtitle} />
@@ -84,8 +87,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         />
       ) : (
         <InfiniteVideoGrid
-          // Remounts on sort change so the feed restarts instead of appending
-          // a new ordering onto the old results.
           key={`${category.slug}-${order}`}
           initialVideos={result.videos}
           totalPages={result.totalPages}
@@ -93,6 +94,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           order={order}
           batchSize={BATCH_SIZE}
           priorityCount={6}
+          categories={ads.feed.categories}
         />
       )}
     </>

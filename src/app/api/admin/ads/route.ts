@@ -139,6 +139,7 @@ export async function PUT(request: Request) {
     },
     banners,
     network,
+    adsterra: body.adsterra ?? current.adsterra,
     vpnWall: {
       enabled: Boolean(body.vpnWall?.enabled ?? current.vpnWall.enabled),
       blockedCountries: Array.isArray(body.vpnWall?.blockedCountries)
@@ -149,16 +150,32 @@ export async function PUT(request: Request) {
       title: String(body.vpnWall?.title ?? current.vpnWall.title),
       message: String(body.vpnWall?.message ?? current.vpnWall.message),
     },
+    feed: body.feed
+      ? {
+          homeQuery: String(body.feed.homeQuery ?? current.feed.homeQuery),
+          homeOrder: String(body.feed.homeOrder ?? current.feed.homeOrder),
+          homeTitle: String(body.feed.homeTitle ?? current.feed.homeTitle),
+          homeSubtitle: String(body.feed.homeSubtitle ?? current.feed.homeSubtitle),
+          relatedFallbackQuery: String(
+            body.feed.relatedFallbackQuery ?? current.feed.relatedFallbackQuery,
+          ),
+          categories: Array.isArray(body.feed.categories)
+            ? body.feed.categories
+            : current.feed.categories,
+        }
+      : current.feed,
     updatedAt: new Date().toISOString(),
   });
 
-  // Flush the layout + page cache so branding/announcement/banner changes are
+  // Flush the layout + page cache so branding/announcement/banner/feed changes are
   // visible to users on the very next request without waiting for TTL expiry.
   revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/search");
   revalidatePath("/favorites");
   revalidatePath("/history");
+  revalidatePath("/category", "layout");
+  revalidatePath("/video", "layout");
 
   invalidateVpnWallConfigCache();
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mergeUniqueById, type EpornerVideo, type SortOrder } from "@/lib/eporner";
+import type { Category } from "@/lib/categories";
 import VideoCard from "./VideoCard";
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   excludeId?: string;
   /** Eagerly load the first row — only for the topmost grid on a page. */
   priorityCount?: number;
+  /** Site categories for the card chip (falls back to defaults inside VideoCard). */
+  categories?: Category[];
 }
 
 /** Start fetching before the sentinel is actually on screen. */
@@ -29,6 +32,7 @@ export default function InfiniteVideoGrid({
   batchSize,
   excludeId,
   priorityCount = 0,
+  categories,
 }: Props) {
   const [videos, setVideos] = useState(initialVideos);
   const [page, setPage] = useState(1);
@@ -87,7 +91,12 @@ export default function InfiniteVideoGrid({
     <>
       <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-x-4 sm:gap-y-6 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
         {videos.map((video, i) => (
-          <VideoCard key={video.id} video={video} priority={i < priorityCount} />
+          <VideoCard
+            key={video.id}
+            video={video}
+            priority={i < priorityCount}
+            categories={categories}
+          />
         ))}
       </div>
 

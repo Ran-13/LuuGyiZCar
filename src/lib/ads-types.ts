@@ -1,3 +1,6 @@
+import type { Category } from "@/lib/categories";
+import { DEFAULT_CATEGORIES } from "@/lib/categories";
+
 /** Named placements that match the red boxes on home + video pages. */
 export const AD_SLOTS = [
   {
@@ -234,6 +237,23 @@ export interface SiteConfig {
 }
 
 /**
+ * Per-site video feed — home query/order, categories, related fallback.
+ * Stored in ads.json so each domain can show different content.
+ */
+export interface FeedConfig {
+  /** Eporner search query for the home grid. Empty = whole catalog. */
+  homeQuery: string;
+  /** Sort order for the home grid (e.g. top-weekly, latest). */
+  homeOrder: string;
+  homeTitle: string;
+  homeSubtitle: string;
+  /** Used on video pages when the clip has no usable tags. */
+  relatedFallbackQuery: string;
+  /** Nav + category pages for this site. */
+  categories: Category[];
+}
+
+/**
  * Myanmar (or other) country wall — visitors whose IP geolocates to a blocked
  * country must use a foreign VPN exit before the site loads.
  */
@@ -245,13 +265,70 @@ export interface VpnWallConfig {
   message: string;
 }
 
+/**
+ * Adsterra Social Bar / Popunder style — a single external script URL
+ * (like happyworldzone.com: pl….effectivecpmnetwork.com/…/….js).
+ */
+export interface AdsterraScript {
+  id: string;
+  enabled: boolean;
+  /** e.g. Social Bar, Popunder */
+  label: string;
+  /** Full https://…/invoke.js or pl….js URL from Adsterra Get code. */
+  src: string;
+}
+
+/** Classic Adsterra banner (atOptions + invoke.js). */
+export interface AdsterraBannerUnit {
+  enabled: boolean;
+  key: string;
+  width: number;
+  height: number;
+  /**
+   * CDN host from the invoke script (no protocol), e.g.
+   * www.highperformanceformat.com — empty uses highperformanceformat.com.
+   */
+  invokeHost: string;
+}
+
+export const ADSTERRA_BANNER_SLOTS = [
+  {
+    id: "ads-home-top",
+    label: "Adsterra — home top banner",
+    description: "Below categories / above the home video grid",
+  },
+  {
+    id: "ads-home-bottom",
+    label: "Adsterra — home bottom banner",
+    description: "Below the home video feed",
+  },
+  {
+    id: "ads-video-below",
+    label: "Adsterra — video page banner",
+    description: "Below the player meta on video pages",
+  },
+] as const;
+
+export type AdsterraBannerSlotId = (typeof ADSTERRA_BANNER_SLOTS)[number]["id"];
+
+export interface AdsterraConfig {
+  /** Master switch for all Adsterra tags. */
+  enabled: boolean;
+  /** Sitewide Social Bar / Popunder scripts (happyworldzone-style). */
+  scripts: AdsterraScript[];
+  banners: Record<AdsterraBannerSlotId, AdsterraBannerUnit>;
+}
+
 export interface AdsConfig {
   site: SiteConfig;
   announcement: AnnouncementConfig;
   banners: Record<AdSlotId, AdBannerConfig>;
   /** ExoClick layer — independent of `banners`. */
   network: AdNetworkConfig;
+  /** Adsterra layer — independent of ExoClick. */
+  adsterra: AdsterraConfig;
   vpnWall: VpnWallConfig;
+  feed: FeedConfig;
   updatedAt: string;
 }
 
@@ -323,14 +400,60 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     verificationCode: "",
     insClass: "",
   },
+  adsterra: {
+    enabled: false,
+    scripts: [
+      {
+        id: "social-bar",
+        enabled: false,
+        label: "Social Bar",
+        src: "",
+      },
+      {
+        id: "popunder",
+        enabled: false,
+        label: "Popunder",
+        src: "",
+      },
+    ],
+    banners: {
+      "ads-home-top": { enabled: false, key: "", width: 300, height: 250, invokeHost: "" },
+      "ads-home-bottom": { enabled: false, key: "", width: 300, height: 100, invokeHost: "" },
+      "ads-video-below": { enabled: false, key: "", width: 300, height: 250, invokeHost: "" },
+    },
+  },
   vpnWall: {
     enabled: false,
     blockedCountries: ["MM"],
     title: "VPN required",
     message: "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ",
   },
+  feed: {
+    homeQuery: "",
+    homeOrder: "top-weekly",
+    homeTitle: "Trending Now",
+    homeSubtitle: "Most watched this week",
+    relatedFallbackQuery: "asian",
+    categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
+  },
   updatedAt: new Date(0).toISOString(),
 };
+
+/** Pull src from a bare URL or a pasted <script src="…"> tag. */
+export function extractAdsterraScriptSrc(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const fromTag = trimmed.match(/src\s*=\s*["']([^"']+)["']/i)?.[1]?.trim();
+  let src = fromTag || trimmed;
+  if (src.startsWith("//")) src = `https:${src}`;
+  try {
+    const u = new URL(src);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return "";
+    return u.toString();
+  } catch {
+    return "";
+  }
+}
 
 export function isSlotId(value: string): value is AdSlotId {
   return AD_SLOTS.some((slot) => slot.id === value);

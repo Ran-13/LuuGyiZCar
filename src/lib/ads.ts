@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { cache } from "react";
 import {
+  ADSTERRA_BANNER_SLOTS,
   AD_SLOTS,
   DEFAULT_ADS_CONFIG,
   INTERSTITIAL_SLOTS,
@@ -18,31 +19,45 @@ import {
   isValidVerificationCode,
   isValidZoneId,
   resolveInsClass,
+  extractAdsterraScriptSrc,
   type AdBannerConfig,
   type AdNetworkConfig,
   type AdsConfig,
   type AdSlotId,
+  type AdsterraBannerSlotId,
+  type AdsterraBannerUnit,
+  type AdsterraConfig,
+  type AdsterraScript,
   type AnnouncementConfig,
   type AnnouncementDialogItem,
+  type FeedConfig,
   type NetworkSlotId,
   type NetworkZoneConfig,
   type SiteConfig,
   type VpnWallConfig,
 } from "@/lib/ads-types";
+import { DEFAULT_CATEGORIES, slugifyCategory, type Category } from "@/lib/categories";
+import { isSortOrder, DEFAULT_ORDER } from "@/lib/eporner";
 
 export type {
   AdBannerConfig,
   AdNetworkConfig,
   AdsConfig,
   AdSlotId,
+  AdsterraBannerSlotId,
+  AdsterraBannerUnit,
+  AdsterraConfig,
+  AdsterraScript,
   AnnouncementConfig,
   AnnouncementDialogItem,
+  FeedConfig,
   NetworkSlotId,
   NetworkZoneConfig,
   SiteConfig,
   VpnWallConfig,
 };
 export {
+  ADSTERRA_BANNER_SLOTS,
   AD_SLOTS,
   DEFAULT_ADS_CONFIG,
   EXOCLICK_INS_CLASS,
@@ -53,6 +68,7 @@ export {
   STICKY_BANNER_SLOTS,
   STICKY_BOTTOM_SLOTS,
   STICKY_TOP_SLOTS,
+  extractAdsterraScriptSrc,
   isNetworkSlotId,
   isSlotId,
   isValidInsClass,
@@ -88,6 +104,118 @@ function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfi
       typeof raw?.message === "string" && raw.message.trim()
         ? raw.message
         : defaults.message,
+  };
+}
+
+function normalizeAdsterraBanner(
+  raw: Partial<AdsterraBannerUnit> | undefined,
+  fallback: AdsterraBannerUnit,
+): AdsterraBannerUnit {
+  const key = typeof raw?.key === "string" ? raw.key.trim() : "";
+  const width = Number(raw?.width);
+  const height = Number(raw?.height);
+  const invokeHost =
+    typeof raw?.invokeHost === "string"
+      ? raw.invokeHost.trim().replace(/^https?:\/\//, "").replace(/\/$/, "")
+      : "";
+  return {
+    enabled: Boolean(raw?.enabled) && Boolean(key),
+    key: /^[a-f0-9]{8,64}$/i.test(key) ? key : "",
+    width: Number.isFinite(width) && width > 0 ? Math.min(Math.round(width), 1200) : fallback.width,
+    height:
+      Number.isFinite(height) && height > 0 ? Math.min(Math.round(height), 1200) : fallback.height,
+    invokeHost: invokeHost && /^[a-z0-9.-]+$/i.test(invokeHost) ? invokeHost : "",
+  };
+}
+
+function normalizeAdsterraScript(
+  raw: Partial<AdsterraScript> | undefined,
+  index: number,
+): AdsterraScript {
+  const src = extractAdsterraScriptSrc(typeof raw?.src === "string" ? raw.src : "");
+  const id =
+    typeof raw?.id === "string" && raw.id.trim()
+      ? raw.id.trim().replace(/[^a-zA-Z0-9._-]/g, "-")
+      : `script-${index + 1}`;
+  const label =
+    typeof raw?.label === "string" && raw.label.trim() ? raw.label.trim() : `Script ${index + 1}`;
+  return {
+    id,
+    enabled: Boolean(raw?.enabled) && Boolean(src),
+    label,
+    src,
+  };
+}
+
+function normalizeAdsterra(raw: Partial<AdsterraConfig> | undefined): AdsterraConfig {
+  const defaults = DEFAULT_ADS_CONFIG.adsterra;
+  const incomingScripts = Array.isArray(raw?.scripts) ? raw.scripts : null;
+  const scripts =
+    incomingScripts && incomingScripts.length > 0
+      ? incomingScripts.map((s, i) => normalizeAdsterraScript(s, i)).slice(0, 8)
+      : defaults.scripts.map((s) => ({ ...s }));
+
+  const banners = { ...defaults.banners };
+  for (const slot of ADSTERRA_BANNER_SLOTS) {
+    banners[slot.id] = normalizeAdsterraBanner(raw?.banners?.[slot.id], defaults.banners[slot.id]);
+  }
+
+  return {
+    enabled: Boolean(raw?.enabled),
+    scripts,
+    banners,
+  };
+}
+
+function normalizeCategory(raw: Partial<Category> | undefined, index: number): Category | null {
+  const label = typeof raw?.label === "string" ? raw.label.trim() : "";
+  const query = typeof raw?.query === "string" ? raw.query.trim() : "";
+  if (!label || !query) return null;
+  const slugRaw = typeof raw?.slug === "string" ? raw.slug.trim() : "";
+  const slug = slugifyCategory(slugRaw || label) || `cat-${index + 1}`;
+  const description =
+    typeof raw?.description === "string" && raw.description.trim()
+      ? raw.description.trim()
+      : `${label} videos.`;
+  return { slug, label, query, description };
+}
+
+function normalizeFeed(raw: Partial<FeedConfig> | undefined): FeedConfig {
+  const defaults = DEFAULT_ADS_CONFIG.feed;
+  const orderRaw = typeof raw?.homeOrder === "string" ? raw.homeOrder.trim() : "";
+  const homeOrder = isSortOrder(orderRaw) ? orderRaw : DEFAULT_ORDER;
+
+  const incoming = Array.isArray(raw?.categories) ? raw.categories : null;
+  const categories: Category[] = [];
+  const seen = new Set<string>();
+  if (incoming && incoming.length > 0) {
+    incoming.forEach((item, index) => {
+      const cat = normalizeCategory(item, index);
+      if (!cat || seen.has(cat.slug)) return;
+      seen.add(cat.slug);
+      categories.push(cat);
+    });
+  }
+
+  return {
+    homeQuery: typeof raw?.homeQuery === "string" ? raw.homeQuery.trim() : defaults.homeQuery,
+    homeOrder,
+    homeTitle:
+      typeof raw?.homeTitle === "string" && raw.homeTitle.trim()
+        ? raw.homeTitle.trim()
+        : defaults.homeTitle,
+    homeSubtitle:
+      typeof raw?.homeSubtitle === "string" && raw.homeSubtitle.trim()
+        ? raw.homeSubtitle.trim()
+        : defaults.homeSubtitle,
+    relatedFallbackQuery:
+      typeof raw?.relatedFallbackQuery === "string" && raw.relatedFallbackQuery.trim()
+        ? raw.relatedFallbackQuery.trim()
+        : defaults.relatedFallbackQuery,
+    categories:
+      categories.length > 0
+        ? categories
+        : DEFAULT_CATEGORIES.map((c) => ({ ...c })),
   };
 }
 
@@ -243,7 +371,9 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
     },
     banners,
     network: normalizeNetwork(raw?.network),
+    adsterra: normalizeAdsterra(raw?.adsterra),
     vpnWall: normalizeVpnWall(raw?.vpnWall),
+    feed: normalizeFeed(raw?.feed),
     updatedAt:
       typeof raw?.updatedAt === "string" ? raw.updatedAt : DEFAULT_ADS_CONFIG.updatedAt,
   };

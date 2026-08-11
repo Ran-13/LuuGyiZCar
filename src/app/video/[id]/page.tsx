@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AdBanner from "@/components/AdBanner";
+import AdsterraBanner from "@/components/AdsterraBanner";
 import ExoClickZone from "@/components/ExoClickZone";
 import FavoriteButton from "@/components/FavoriteButton";
 import GridSkeleton from "@/components/GridSkeleton";
@@ -60,7 +61,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  * genuinely sequential after `getVideoById`. Isolating it behind Suspense lets
  * the player paint after the first call instead of waiting for both.
  */
-async function RelatedSection({ query, currentId }: { query: string; currentId: string }) {
+async function RelatedSection({
+  query,
+  currentId,
+  categories,
+}: {
+  query: string;
+  currentId: string;
+  categories: import("@/lib/categories").Category[];
+}) {
   const related = await searchVideos({
     query,
     perPage: RELATED_BATCH,
@@ -78,6 +87,7 @@ async function RelatedSection({ query, currentId }: { query: string; currentId: 
       order="top-weekly"
       batchSize={RELATED_BATCH}
       excludeId={currentId}
+      categories={categories}
     />
   );
 }
@@ -89,8 +99,8 @@ export default async function VideoPage({ params }: PageProps) {
 
   const tags = parseKeywords(video.keywords);
 
-  // Related videos key off the first usable tag; falls back to the busiest generic term.
-  const relatedQuery = tags[0] ?? "asian";
+  // Related videos key off the first usable tag; falls back to site feed setting.
+  const relatedQuery = tags[0] ?? ads.feed.relatedFallbackQuery;
 
   const rating = formatRating(video.rate);
   const added = formatAdded(video.added);
@@ -175,6 +185,7 @@ export default async function VideoPage({ params }: PageProps) {
         <AdBanner banner={ads.banners["video-mid"]} className="mt-5" />
 
         <ExoClickZone network={ads.network} slot="net-video-below" className="mt-5" />
+        <AdsterraBanner adsterra={ads.adsterra} slot="ads-video-below" className="mt-5" />
       </div>
 
       <section className="mt-12">
@@ -183,7 +194,11 @@ export default async function VideoPage({ params }: PageProps) {
         {/* Native / recommendation widget — blends under the related heading, not a tall banner. */}
         <ExoClickZone network={ads.network} slot="net-video-native" className="mb-5 w-full" />
         <Suspense fallback={<GridSkeleton count={RELATED_BATCH} />}>
-          <RelatedSection query={relatedQuery} currentId={video.id} />
+          <RelatedSection
+            query={relatedQuery}
+            currentId={video.id}
+            categories={ads.feed.categories}
+          />
         </Suspense>
       </section>
     </>

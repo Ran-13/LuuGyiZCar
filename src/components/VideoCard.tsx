@@ -4,31 +4,23 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import type { VideoSummary } from "@/lib/eporner";
 import { formatAdded, formatViews } from "@/lib/eporner";
-import { CATEGORIES } from "@/lib/categories";
+import { detectCategoryLabel, type Category } from "@/lib/categories";
 import FavoriteButton from "./FavoriteButton";
 
 interface Props {
   video: VideoSummary;
   /** Only the first visible row should load eagerly — everything below stays lazy. */
   priority?: boolean;
+  categories?: Category[];
 }
 
 const SCRUB_INTERVAL_MS = 600;
 
-/** Pick the first keyword that matches a known category slug/label. */
-function detectCategory(keywords: string): string | null {
-  if (!keywords) return null;
-  const kw = keywords.toLowerCase();
-  for (const cat of CATEGORIES) {
-    if (kw.includes(cat.query.toLowerCase())) return cat.label;
-  }
-  return null;
-}
-
-export default function VideoCard({ video, priority = false }: Props) {
+export default function VideoCard({ video, priority = false, categories }: Props) {
   const frames = video.thumbs?.length ? video.thumbs : [video.default_thumb];
   const [frame, setFrame] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const categoryLabel = detectCategoryLabel(video.keywords ?? "", categories);
 
   const stopScrub = () => {
     if (timer.current) {
@@ -48,7 +40,7 @@ export default function VideoCard({ video, priority = false }: Props) {
   const added = formatAdded(video.added);
   const src = frames[frame]?.src ?? video.default_thumb?.src;
   const isHd = (video.default_thumb?.width ?? 0) >= 640;
-  const category = detectCategory(video.keywords ?? "");
+  const category = categoryLabel;
 
   return (
     <article
