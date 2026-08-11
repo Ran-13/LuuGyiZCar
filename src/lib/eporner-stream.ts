@@ -1,5 +1,3 @@
-import { cache } from "react";
-
 /**
  * Resolve playable Eporner MP4 URLs on the server (VPS), then serve them through
  * our `/api/stream` proxy. CDN links are IP-bound to the resolver — clients in
@@ -12,8 +10,8 @@ const EMBED_UA =
   "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
 
 const REQUEST_TIMEOUT_MS = 12_000;
-/** Source URLs expire; keep short so we refresh signed CDN paths. */
-const SOURCE_REVALIDATE_SECONDS = 600;
+/** Keep signed CDN URLs warm for seeks without re-hitting xhr every Range request. */
+const PLAYBACK_TTL_MS = 8 * 60_000;
 
 export type StreamQuality = {
   /** e.g. "360p" */
@@ -27,9 +25,14 @@ export type StreamQuality = {
 export type PlaybackInfo = {
   id: string;
   qualities: StreamQuality[];
+  /** Epoch ms when this entry should be refreshed. */
+  expiresAt: number;
 };
 
 const ID_RE = /^[A-Za-z0-9]+$/;
+
+/** Process-local cache so scrubbing does not re-resolve on every Range hit. */
+const playbackCache = new Map<string, PlaybackInfo>();
 
 export function isEpornerVideoId(id: string): boolean {
   return ID_RE.test(id) && id.length >= 6 && id.length <= 32;
@@ -69,7 +72,7 @@ async function fetchEmbedHash(id: string): Promise<string | null> {
       Accept: "text/html,application/xhtml+xml",
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    next: { revalidate: SOURCE_REVALIDATE_SECONDS },
+    cache: "no-store",
   });
   if (!res.ok) return null;
   const html = await res.text();
@@ -93,8 +96,7 @@ async function fetchXhrSources(id: string, xhrHash: string): Promise<XhrSourceMa
       Accept: "application/json",
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    // Signed URLs are IP + time bound — do not share cache across long periods.
-    next: { revalidate: SOURCE_REVALIDATE_SECONDS },
+    cache: "no-store",
   });
   if (!res.ok) return null;
 
@@ -106,7 +108,7 @@ async function fetchXhrSources(id: string, xhrHash: string): Promise<XhrSourceMa
   return data.sources;
 }
 
-function parseQualities(id: string, sources: XhrSourceMap): StreamQuality[] {
+function parseQualities(sources: XhrSourceMap): StreamQuality[] {
   const mp4 = sources.mp4;
   if (!mp4 || typeof mp4 !== "object") return [];
 
@@ -128,29 +130,49 @@ function parseQualities(id: string, sources: XhrSourceMap): StreamQuality[] {
   return list;
 }
 
+async function resolvePlaybackFresh(id: string): Promise<PlaybackInfo | null> {
+  const rawHash = await fetchEmbedHash(id);
+  if (!rawHash) return null;
+  const xhrHash = calcEpornerXhrHash(rawHash);
+  const sources = await fetchXhrSources(id, xhrHash);
+  if (!sources) return null;
+  const qualities = parseQualities(sources);
+  if (qualities.length === 0) return null;
+  return {
+    id,
+    qualities,
+    expiresAt: Date.now() + PLAYBACK_TTL_MS,
+  };
+}
+
 /**
- * Resolve MP4 qualities for a video id. Cached per-request via React.cache;
- * fetch() still applies Next revalidate for cross-request reuse.
+ * Resolve MP4 qualities. Uses an in-memory TTL cache so Range seeks stay fast
+ * (Chrome may fire many Range requests while scrubbing).
  */
-export const resolvePlayback = cache(async function resolvePlayback(
+export async function resolvePlayback(
   id: string,
+  opts?: { force?: boolean },
 ): Promise<PlaybackInfo | null> {
   if (!isEpornerVideoId(id)) return null;
 
+  const now = Date.now();
+  if (!opts?.force) {
+    const hit = playbackCache.get(id);
+    if (hit && hit.expiresAt > now) return hit;
+  }
+
   try {
-    const rawHash = await fetchEmbedHash(id);
-    if (!rawHash) return null;
-    const xhrHash = calcEpornerXhrHash(rawHash);
-    const sources = await fetchXhrSources(id, xhrHash);
-    if (!sources) return null;
-    const qualities = parseQualities(id, sources);
-    if (qualities.length === 0) return null;
-    return { id, qualities };
+    const info = await resolvePlaybackFresh(id);
+    if (info) playbackCache.set(id, info);
+    return info;
   } catch (err) {
     console.error(`[eporner-stream] resolve failed id=${id}`, err);
+    // Stale fallback: better to try an almost-expired URL than fail mid-seek.
+    const stale = playbackCache.get(id);
+    if (stale) return stale;
     return null;
   }
-});
+}
 
 /** Always start at 360p (fast start + lower VPS egress). Falls back nearby if missing. */
 export function pickDefaultQuality(qualities: StreamQuality[]): StreamQuality | null {

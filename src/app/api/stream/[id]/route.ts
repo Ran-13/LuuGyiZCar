@@ -4,6 +4,7 @@ import {
   isEpornerVideoId,
   pickDefaultQuality,
   resolvePlayback,
+  type StreamQuality,
 } from "@/lib/eporner-stream";
 import { checkRateLimit, getClientKey } from "@/lib/rate-limit";
 
@@ -11,7 +12,8 @@ export const runtime = "nodejs";
 /** Long-running byte proxy for video Range requests. */
 export const maxDuration = 300;
 
-const RATE_LIMIT = 180;
+/** Scrubbing fires many Range hits — keep this high so seeks do not 429. */
+const RATE_LIMIT = 900;
 const RATE_WINDOW_MS = 60_000;
 
 const UPSTREAM_UA =
@@ -19,12 +21,15 @@ const UPSTREAM_UA =
 
 function isAllowedClient(request: Request): boolean {
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite === "same-origin") return true;
+  if (fetchSite === "same-origin" || fetchSite === "none") return true;
 
-  // <video> on some mobile Chrome builds omits/varies Sec-Fetch-Site; allow
-  // same-origin Referer as a second check so playback still works.
   const referer = request.headers.get("referer");
-  if (!referer) return false;
+  if (!referer) {
+    // Some mobile players omit Referer on Range follow-ups; allow same-origin
+    // Sec-Fetch-Dest=video/empty when site header is missing.
+    const dest = request.headers.get("sec-fetch-dest");
+    return dest === "video" || dest === "empty";
+  }
   try {
     const ref = new URL(referer);
     const here = new URL(request.url);
@@ -38,11 +43,74 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+async function pickUpstream(
+  request: Request,
+  id: string,
+): Promise<{ quality: StreamQuality } | NextResponse> {
+  const playback = await resolvePlayback(id);
+  if (!playback || playback.qualities.length === 0) {
+    return NextResponse.json(
+      { error: "Stream unavailable", code: "NO_SOURCES" },
+      { status: 502 },
+    );
+  }
+
+  const wanted = new URL(request.url).searchParams.get("q");
+  const quality =
+    findQuality(playback.qualities, wanted) ?? pickDefaultQuality(playback.qualities);
+
+  if (!quality) {
+    return NextResponse.json({ error: "Quality not found", code: "NO_QUALITY" }, { status: 404 });
+  }
+  return { quality };
+}
+
+function proxyHeaders(upstream: Response, qualityLabel: string): Headers {
+  const headers = new Headers();
+  headers.set("Content-Type", upstream.headers.get("content-type") || "video/mp4");
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Cache-Control", "private, no-store");
+  headers.set("X-Stream-Quality", qualityLabel);
+  // Prevent nginx from buffering the whole segment (breaks smooth seek).
+  headers.set("X-Accel-Buffering", "no");
+
+  const contentLength = upstream.headers.get("content-length");
+  if (contentLength) headers.set("Content-Length", contentLength);
+  const contentRange = upstream.headers.get("content-range");
+  if (contentRange) headers.set("Content-Range", contentRange);
+  const etag = upstream.headers.get("etag");
+  if (etag) headers.set("ETag", etag);
+  const lastModified = upstream.headers.get("last-modified");
+  if (lastModified) headers.set("Last-Modified", lastModified);
+
+  return headers;
+}
+
+async function fetchUpstream(
+  id: string,
+  quality: StreamQuality,
+  range: string | null,
+  method: "GET" | "HEAD",
+): Promise<Response> {
+  const upstreamHeaders: Record<string, string> = {
+    "User-Agent": UPSTREAM_UA,
+    Referer: `https://www.eporner.com/embed/${id}/`,
+    Accept: "*/*",
+    Connection: "keep-alive",
+  };
+  if (range) upstreamHeaders.Range = range;
+
+  return fetch(quality.upstreamUrl, {
+    method,
+    headers: upstreamHeaders,
+    redirect: "follow",
+    cache: "no-store",
+  });
+}
+
 /**
  * Proxies Eporner MP4 bytes through this VPS so viewers in blocked regions
- * (no direct CDN access) can still play. Supports HTTP Range for seeking.
- *
- * Query: `?q=360p` (format id or label). Default is 360p.
+ * can play + seek. Supports HTTP Range (206) for scrubbing/resume.
  */
 export async function GET(request: Request, context: RouteContext) {
   if (!isAllowedClient(request)) {
@@ -55,13 +123,13 @@ export async function GET(request: Request, context: RouteContext) {
     RATE_WINDOW_MS,
   );
   if (!limit.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests", code: "RATE_LIMITED" },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSeconds) },
+    return new NextResponse(null, {
+      status: 429,
+      headers: {
+        "Retry-After": String(limit.retryAfterSeconds),
+        "Accept-Ranges": "bytes",
       },
-    );
+    });
   }
 
   const { id } = await context.params;
@@ -69,42 +137,40 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid id", code: "BAD_ID" }, { status: 400 });
   }
 
-  const playback = await resolvePlayback(id);
-  if (!playback || playback.qualities.length === 0) {
-    return NextResponse.json(
-      { error: "Stream unavailable", code: "NO_SOURCES" },
-      { status: 502 },
-    );
-  }
-
-  const { searchParams } = new URL(request.url);
-  const wanted = searchParams.get("q");
-  const quality =
-    findQuality(playback.qualities, wanted) ?? pickDefaultQuality(playback.qualities);
-
-  if (!quality) {
-    return NextResponse.json({ error: "Quality not found", code: "NO_QUALITY" }, { status: 404 });
-  }
+  const picked = await pickUpstream(request, id);
+  if (picked instanceof NextResponse) return picked;
+  const { quality } = picked;
 
   const range = request.headers.get("range");
-  const upstreamHeaders: HeadersInit = {
-    "User-Agent": UPSTREAM_UA,
-    Referer: `https://www.eporner.com/embed/${id}/`,
-    Accept: "*/*",
-  };
-  if (range) upstreamHeaders.Range = range;
 
   let upstream: Response;
   try {
-    upstream = await fetch(quality.upstreamUrl, {
-      headers: upstreamHeaders,
-      redirect: "follow",
-      // Streaming body — do not cache the whole file in Next's data cache.
-      cache: "no-store",
-    });
+    upstream = await fetchUpstream(id, quality, range, "GET");
   } catch (err) {
     console.error(`[stream] upstream fetch failed id=${id} q=${quality.id}`, err);
-    return NextResponse.json({ error: "Upstream error", code: "UPSTREAM" }, { status: 502 });
+    // Refresh signed URL once and retry (common after idle + seek).
+    await resolvePlayback(id, { force: true });
+    const retryPick = await pickUpstream(request, id);
+    if (retryPick instanceof NextResponse) return retryPick;
+    try {
+      upstream = await fetchUpstream(id, retryPick.quality, range, "GET");
+    } catch (err2) {
+      console.error(`[stream] retry failed id=${id}`, err2);
+      return NextResponse.json({ error: "Upstream error", code: "UPSTREAM" }, { status: 502 });
+    }
+  }
+
+  // Expired CDN token often returns 403/404 — force refresh once.
+  if (upstream.status === 403 || upstream.status === 404) {
+    await resolvePlayback(id, { force: true });
+    const retryPick = await pickUpstream(request, id);
+    if (!(retryPick instanceof NextResponse)) {
+      try {
+        upstream = await fetchUpstream(id, retryPick.quality, range, "GET");
+      } catch {
+        /* fall through */
+      }
+    }
   }
 
   if (!(upstream.status === 200 || upstream.status === 206)) {
@@ -115,19 +181,43 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  const headers = new Headers();
-  headers.set("Content-Type", upstream.headers.get("content-type") || "video/mp4");
-  headers.set("Accept-Ranges", "bytes");
-  headers.set("Cache-Control", "private, max-age=300");
-  headers.set("X-Stream-Quality", quality.label);
-
-  const contentLength = upstream.headers.get("content-length");
-  if (contentLength) headers.set("Content-Length", contentLength);
-  const contentRange = upstream.headers.get("content-range");
-  if (contentRange) headers.set("Content-Range", contentRange);
+  // If client asked for a Range but upstream ignored it, do not pretend — browsers
+  // break seek when they get 200 for a ranged request without Content-Range.
+  if (range && upstream.status === 200 && !upstream.headers.get("content-range")) {
+    console.error(`[stream] missing Content-Range for ranged request id=${id}`);
+  }
 
   return new Response(upstream.body, {
     status: upstream.status,
-    headers,
+    headers: proxyHeaders(upstream, quality.label),
   });
+}
+
+/** Chrome often HEADs the media URL before seeking — must advertise size + ranges. */
+export async function HEAD(request: Request, context: RouteContext) {
+  if (!isAllowedClient(request)) {
+    return new NextResponse(null, { status: 403 });
+  }
+
+  const { id } = await context.params;
+  if (!isEpornerVideoId(id)) {
+    return new NextResponse(null, { status: 400 });
+  }
+
+  const picked = await pickUpstream(request, id);
+  if (picked instanceof NextResponse) return picked;
+  const { quality } = picked;
+
+  try {
+    const upstream = await fetchUpstream(id, quality, null, "HEAD");
+    if (!upstream.ok) {
+      return new NextResponse(null, { status: upstream.status });
+    }
+    return new NextResponse(null, {
+      status: 200,
+      headers: proxyHeaders(upstream, quality.label),
+    });
+  } catch {
+    return new NextResponse(null, { status: 502 });
+  }
 }

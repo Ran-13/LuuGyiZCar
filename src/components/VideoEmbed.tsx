@@ -27,11 +27,14 @@ type Mode = "loading" | "native" | "embed" | "error";
  */
 export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const resumeAfterSeek = useRef(false);
+  const recoverTries = useRef(0);
   const [mode, setMode] = useState<Mode>("loading");
   const [qualities, setQualities] = useState<Quality[]>([]);
   const [qualityId, setQualityId] = useState<string>("");
   const [attempt, setAttempt] = useState(0);
   const [mediaError, setMediaError] = useState(false);
+  const [waiting, setWaiting] = useState(false);
 
   const active = qualities.find((q) => q.id === qualityId) ?? qualities[0];
 
@@ -67,12 +70,15 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
     const t = el?.currentTime ?? 0;
     const wasPaused = el?.paused ?? true;
     setQualityId(nextId);
-    // Apply after src swap on next paint.
     requestAnimationFrame(() => {
       const v = videoRef.current;
       if (!v) return;
       const resume = () => {
-        v.currentTime = t;
+        try {
+          if (Number.isFinite(t) && t > 0) v.currentTime = t;
+        } catch {
+          /* ignore seek until buffer ready */
+        }
         if (!wasPaused) void v.play().catch(() => undefined);
         v.removeEventListener("loadedmetadata", resume);
       };
@@ -86,6 +92,28 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
   };
 
   const useEmbed = () => setMode("embed");
+
+  const recoverAfterError = () => {
+    const v = videoRef.current;
+    if (!v || !active) return;
+    if (recoverTries.current >= 1) return;
+    recoverTries.current += 1;
+    const t = v.currentTime || 0;
+    // Bust any broken partial buffer and retry the same proxied URL.
+    const url = `${active.src}${active.src.includes("?") ? "&" : "?"}r=${Date.now()}`;
+    v.src = url;
+    v.load();
+    const onMeta = () => {
+      try {
+        if (t > 0) v.currentTime = t;
+      } catch {
+        /* ignore */
+      }
+      void v.play().catch(() => undefined);
+      v.removeEventListener("loadedmetadata", onMeta);
+    };
+    v.addEventListener("loadedmetadata", onMeta);
+  };
 
   if (mode === "loading") {
     return (
@@ -119,13 +147,40 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
             className="absolute inset-0 h-full w-full bg-black"
             controls
             playsInline
-            preload="metadata"
+            preload="auto"
             poster={poster}
             src={active.src}
             title={title}
-            onError={() => setMediaError(true)}
-            onPlaying={() => setMediaError(false)}
+            onWaiting={() => setWaiting(true)}
+            onPlaying={() => {
+              setWaiting(false);
+              setMediaError(false);
+              recoverTries.current = 0;
+            }}
+            onCanPlay={() => setWaiting(false)}
+            onSeeking={() => {
+              resumeAfterSeek.current = !(videoRef.current?.paused ?? true);
+              setWaiting(true);
+            }}
+            onSeeked={() => {
+              setWaiting(false);
+              const v = videoRef.current;
+              if (v && resumeAfterSeek.current) {
+                void v.play().catch(() => undefined);
+              }
+            }}
+            onError={() => {
+              setMediaError(true);
+              setWaiting(false);
+              // One automatic recovery pass for failed Range/seek.
+              recoverAfterError();
+            }}
           />
+          {waiting ? (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+              <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-brand-500" />
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -167,7 +222,6 @@ export default function VideoEmbed({ id, embedSrc, title, poster }: Props) {
     );
   }
 
-  // Embed fallback (Eporner iframe — may need VPN in some regions).
   const frameSrc =
     attempt === 0 ? embedSrc : `${embedSrc}${embedSrc.includes("?") ? "&" : "?"}r=${attempt}`;
 
