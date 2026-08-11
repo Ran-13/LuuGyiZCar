@@ -268,10 +268,15 @@ export interface VpnWallConfig {
 /** Native stream proxy through this VPS (viewers do not need Eporner VPN). */
 export interface PlaybackConfig {
   /**
-   * When on, `/api/stream` proxies MP4s. When off, the player uses the Eporner
-   * embed iframe only (saves VPS bandwidth).
+   * off — Eporner embed only (fast seek; needs user VPN in blocked regions)
+   * always — always proxy via VPS
+   * auto — try embed when Eporner is reachable; proxy only when blocked
    */
-  proxyEnabled: boolean;
+  proxyMode: "off" | "always" | "auto";
+  /**
+   * @deprecated Use proxyMode. Kept for older ads.json: false→off, true→always.
+   */
+  proxyEnabled?: boolean;
 }
 
 /**
@@ -446,7 +451,7 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
     message: "Vpnလေးချိတ်ပီးမှ ပြန်ဝင်သုံးပေးကြပါ ဗျ",
   },
   playback: {
-    proxyEnabled: true,
+    proxyMode: "auto",
   },
   feed: {
     homeQuery: "",

@@ -10,6 +10,8 @@ interface Quality {
   src: string;
 }
 
+type ProxyMode = "off" | "always" | "auto";
+
 interface Props {
   /** Eporner video id — used for proxied native playback. */
   id: string;
@@ -17,27 +19,48 @@ interface Props {
   embedSrc: string;
   title: string;
   poster?: string;
-  /** When false, skip proxy and use Eporner embed only. */
+  /**
+   * off — embed only
+   * always — VPS proxy
+   * auto — proxy when geoLikelyBlocked / probe fails; else embed (faster seek)
+   */
+  proxyMode?: ProxyMode;
+  /** @deprecated Prefer proxyMode. */
   proxyEnabled?: boolean;
+  /**
+   * Server hint for auto mode: viewer country is in the blocked list
+   * (e.g. MM) so Eporner CDN usually fails without VPN → use proxy.
+   */
+  preferProxy?: boolean;
 }
 
 type Mode = "loading" | "native" | "embed" | "error";
 
+const SKIP_SEC = 60;
+
 /**
- * Plays via our VPS stream proxy (no viewer VPN needed). Falls back to the
- * Eporner iframe if sources cannot be resolved.
+ * Auto: embed when Eporner is usable (fast minute-skip); proxy when geo-blocked
+ * so viewers without VPN can still play. Always/off override that.
  */
 export default function VideoEmbed({
   id,
   embedSrc,
   title,
   poster,
+  proxyMode,
   proxyEnabled = true,
+  preferProxy = false,
 }: Props) {
+  const modeResolved: ProxyMode =
+    proxyMode ?? (proxyEnabled === false ? "off" : "always");
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const resumeAfterSeek = useRef(false);
+  const seekingHard = useRef(false);
   const recoverTries = useRef(0);
-  const [mode, setMode] = useState<Mode>(proxyEnabled ? "loading" : "embed");
+  const [mode, setMode] = useState<Mode>(() =>
+    modeResolved === "off" ? "embed" : "loading",
+  );
   const [qualities, setQualities] = useState<Quality[]>([]);
   const [qualityId, setQualityId] = useState<string>("");
   const [attempt, setAttempt] = useState(0);
@@ -46,11 +69,7 @@ export default function VideoEmbed({
 
   const active = qualities.find((q) => q.id === qualityId) ?? qualities[0];
 
-  const loadPlayback = useCallback(async () => {
-    if (!proxyEnabled) {
-      setMode("embed");
-      return;
-    }
+  const loadProxyPlayback = useCallback(async () => {
     setMode("loading");
     setMediaError(false);
     try {
@@ -76,11 +95,48 @@ export default function VideoEmbed({
       setQualities([]);
       setMode("embed");
     }
-  }, [id, proxyEnabled]);
+  }, [id]);
+
+  /** Quick check: can the browser reach Eporner at all? */
+  const probeEpornerReachable = useCallback(async (): Promise<boolean> => {
+    try {
+      await fetch("https://www.eporner.com/favicon.ico", {
+        mode: "no-cors",
+        cache: "no-store",
+        signal: AbortSignal.timeout(2500),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
-    void loadPlayback();
-  }, [loadPlayback, attempt]);
+    if (modeResolved === "off") return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      if (modeResolved === "always" || preferProxy) {
+        if (!cancelled) await loadProxyPlayback();
+        return;
+      }
+
+      // auto + not geo-blocked: prefer embed when Eporner is reachable.
+      const reachable = await probeEpornerReachable();
+      if (cancelled) return;
+      if (reachable) {
+        setMode("embed");
+        return;
+      }
+      await loadProxyPlayback();
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [modeResolved, preferProxy, loadProxyPlayback, probeEpornerReachable, attempt]);
 
   const onQualityChange = (nextId: string) => {
     const el = videoRef.current;
@@ -110,13 +166,32 @@ export default function VideoEmbed({
 
   const useEmbed = () => setMode("embed");
 
+  const useProxy = () => {
+    void loadProxyPlayback();
+  };
+
+  const skipBy = (delta: number) => {
+    const v = videoRef.current;
+    if (!v || !Number.isFinite(v.duration) || v.duration <= 0) return;
+    seekingHard.current = true;
+    resumeAfterSeek.current = !v.paused;
+    const next = Math.max(0, Math.min(v.duration - 0.25, v.currentTime + delta));
+    try {
+      v.currentTime = next;
+    } catch {
+      seekingHard.current = false;
+    }
+  };
+
   const recoverAfterError = () => {
     const v = videoRef.current;
     if (!v || !active) return;
+    // Abort while scrubbing is normal — do not thrash the source.
+    if (seekingHard.current) return;
+    if (v.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
     if (recoverTries.current >= 1) return;
     recoverTries.current += 1;
     const t = v.currentTime || 0;
-    // Bust any broken partial buffer and retry the same proxied URL.
     const url = `${active.src}${active.src.includes("?") ? "&" : "?"}r=${Date.now()}`;
     v.src = url;
     v.load();
@@ -173,13 +248,16 @@ export default function VideoEmbed({
               setWaiting(false);
               setMediaError(false);
               recoverTries.current = 0;
+              seekingHard.current = false;
             }}
             onCanPlay={() => setWaiting(false)}
             onSeeking={() => {
+              seekingHard.current = true;
               resumeAfterSeek.current = !(videoRef.current?.paused ?? true);
               setWaiting(true);
             }}
             onSeeked={() => {
+              seekingHard.current = false;
               setWaiting(false);
               const v = videoRef.current;
               if (v && resumeAfterSeek.current) {
@@ -187,9 +265,12 @@ export default function VideoEmbed({
               }
             }}
             onError={() => {
+              const v = videoRef.current;
+              if (seekingHard.current || v?.error?.code === MediaError.MEDIA_ERR_ABORTED) {
+                return;
+              }
               setMediaError(true);
               setWaiting(false);
-              // One automatic recovery pass for failed Range/seek.
               recoverAfterError();
             }}
           />
@@ -201,6 +282,21 @@ export default function VideoEmbed({
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => skipBy(-SKIP_SEC)}
+            className="rounded-md border border-ink-700 px-2.5 py-1.5 text-xs font-semibold text-ink-300 hover:border-brand-500 hover:text-brand-500"
+          >
+            −1 min
+          </button>
+          <button
+            type="button"
+            onClick={() => skipBy(SKIP_SEC)}
+            className="rounded-md border border-ink-700 px-2.5 py-1.5 text-xs font-semibold text-ink-300 hover:border-brand-500 hover:text-brand-500"
+          >
+            +1 min
+          </button>
+
           <label className="flex items-center gap-1.5 text-xs text-ink-400">
             Quality
             <select
@@ -225,7 +321,7 @@ export default function VideoEmbed({
             Reload
           </button>
 
-          {mediaError ? (
+          {mediaError || modeResolved === "auto" ? (
             <button
               type="button"
               onClick={useEmbed}
@@ -258,16 +354,17 @@ export default function VideoEmbed({
         />
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        {proxyEnabled ? (
+        {modeResolved !== "off" ? (
           <>
-            <p className="text-xs text-ink-500">Embed fallback</p>
+            <p className="text-xs text-ink-500">
+              {modeResolved === "auto" ? "Direct embed (faster seek)" : "Embed fallback"}
+            </p>
             <button
               type="button"
-              onClick={reload}
+              onClick={useProxy}
               className="ml-auto flex items-center gap-1.5 rounded-md border border-ink-700 px-2.5 py-1.5 text-xs font-semibold text-ink-300 hover:border-brand-500 hover:text-brand-500"
             >
-              <RotateCcw size={13} aria-hidden />
-              Try proxy again
+              {modeResolved === "auto" ? "Can't play? Use proxy" : "Try proxy again"}
             </button>
           </>
         ) : null}

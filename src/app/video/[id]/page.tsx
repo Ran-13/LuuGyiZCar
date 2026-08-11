@@ -1,6 +1,7 @@
 import { Star } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AdBanner from "@/components/AdBanner";
@@ -26,6 +27,11 @@ import {
   type EpornerVideo,
 } from "@/lib/eporner";
 import { absoluteUrl } from "@/lib/site";
+import {
+  getRequestIp,
+  isBlockedCountry,
+  lookupCountryCode,
+} from "@/lib/vpn-wall";
 
 export const revalidate = 60;
 
@@ -123,7 +129,14 @@ export default async function VideoPage({ params }: PageProps) {
   const tags = parseKeywords(video.keywords);
   const rating = formatRating(video.rate);
   const added = formatAdded(video.added);
-  const proxyEnabled = ads.playback?.proxyEnabled !== false;
+  const proxyMode = ads.playback?.proxyMode ?? "auto";
+  // Auto: MM (etc.) viewers usually need the VPS proxy; others get embed (fast seek).
+  const hdrs = await headers();
+  const country = await lookupCountryCode(getRequestIp(hdrs));
+  const preferProxy =
+    proxyMode === "always" ||
+    (proxyMode === "auto" &&
+      isBlockedCountry(country, ads.vpnWall?.blockedCountries ?? ["MM"]));
 
   const uploadDate = toIsoDate(video.added);
   const duration = toIsoDuration(video.length_sec);
@@ -165,7 +178,8 @@ export default async function VideoPage({ params }: PageProps) {
           embedSrc={video.embed}
           title={video.title}
           poster={video.default_thumb?.src}
-          proxyEnabled={proxyEnabled}
+          proxyMode={proxyMode}
+          preferProxy={preferProxy}
         />
 
         <h1 className="mt-4 text-lg leading-snug font-bold text-ink-100 sm:text-xl">

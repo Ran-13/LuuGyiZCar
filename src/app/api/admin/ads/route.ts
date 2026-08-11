@@ -169,11 +169,19 @@ export async function PUT(request: Request) {
       title: String(body.vpnWall?.title ?? current.vpnWall.title),
       message: String(body.vpnWall?.message ?? current.vpnWall.message),
     },
-    playback: {
-      proxyEnabled: Boolean(
-        body.playback?.proxyEnabled ?? current.playback?.proxyEnabled ?? true,
-      ),
-    },
+    playback: (() => {
+      const mode = body.playback?.proxyMode ?? current.playback?.proxyMode;
+      if (mode === "off" || mode === "always" || mode === "auto") {
+        return { proxyMode: mode };
+      }
+      if (typeof body.playback?.proxyEnabled === "boolean") {
+        return { proxyMode: body.playback.proxyEnabled ? "always" : "off" };
+      }
+      if (typeof current.playback?.proxyEnabled === "boolean") {
+        return { proxyMode: current.playback.proxyEnabled ? "always" : "off" };
+      }
+      return { proxyMode: "auto" as const };
+    })(),
     feed: body.feed
       ? {
           homeQuery: String(body.feed.homeQuery ?? current.feed.homeQuery),

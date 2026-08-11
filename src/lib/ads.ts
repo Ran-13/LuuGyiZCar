@@ -110,12 +110,15 @@ function normalizeVpnWall(raw: Partial<VpnWallConfig> | undefined): VpnWallConfi
 }
 
 function normalizePlayback(raw: Partial<PlaybackConfig> | undefined): PlaybackConfig {
-  // Default ON when missing so existing deployments keep the proxy after upgrade.
-  // Explicit `false` turns it off.
-  if (raw && typeof raw.proxyEnabled === "boolean") {
-    return { proxyEnabled: raw.proxyEnabled };
+  const modeRaw = typeof raw?.proxyMode === "string" ? raw.proxyMode : "";
+  if (modeRaw === "off" || modeRaw === "always" || modeRaw === "auto") {
+    return { proxyMode: modeRaw };
   }
-  return { proxyEnabled: DEFAULT_ADS_CONFIG.playback.proxyEnabled };
+  // Migrate legacy boolean
+  if (raw && typeof raw.proxyEnabled === "boolean") {
+    return { proxyMode: raw.proxyEnabled ? "always" : "off" };
+  }
+  return { proxyMode: DEFAULT_ADS_CONFIG.playback.proxyMode };
 }
 
 function normalizeAdsterraBanner(

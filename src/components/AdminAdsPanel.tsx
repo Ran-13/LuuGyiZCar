@@ -411,18 +411,25 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                 className={field}
               />
             </label>
-            <label className="mt-5 flex items-center gap-2 text-sm text-ink-300">
-              <input
-                type="checkbox"
-                checked={config.playback?.proxyEnabled !== false}
+            <label className={`mt-5 ${labelCls}`}>
+              Player proxy mode
+              <select
+                value={config.playback?.proxyMode ?? "auto"}
                 onChange={(e) =>
                   setConfig((prev) => ({
                     ...prev,
-                    playback: { ...prev.playback, proxyEnabled: e.target.checked },
+                    playback: {
+                      ...prev.playback,
+                      proxyMode: e.target.value as "off" | "always" | "auto",
+                    },
                   }))
                 }
-              />
-              Stream proxy (VPS) — off = Eporner embed only
+                className={field}
+              >
+                <option value="auto">Auto — embed when possible, proxy if blocked</option>
+                <option value="always">Always proxy (no VPN needed, uses VPS bandwidth)</option>
+                <option value="off">Off — Eporner embed only (fast seek, may need VPN)</option>
+              </select>
             </label>
           </section>
         )}

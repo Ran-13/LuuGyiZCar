@@ -119,7 +119,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const ads = await readAdsConfig();
-  if (ads.playback?.proxyEnabled === false) {
+  if (ads.playback?.proxyMode === "off") {
     return NextResponse.json({ error: "Proxy disabled", code: "PROXY_OFF" }, { status: 403 });
   }
 
@@ -206,7 +206,7 @@ export async function HEAD(request: Request, context: RouteContext) {
   }
 
   const ads = await readAdsConfig();
-  if (ads.playback?.proxyEnabled === false) {
+  if (ads.playback?.proxyMode === "off") {
     return new NextResponse(null, { status: 403 });
   }
 
@@ -220,7 +220,21 @@ export async function HEAD(request: Request, context: RouteContext) {
   const { quality } = picked;
 
   try {
-    const upstream = await fetchUpstream(id, quality, null, "HEAD");
+    let upstream = await fetchUpstream(id, quality, null, "HEAD");
+    // Some CDNs reject HEAD or omit Content-Length — probe with a 1-byte Range GET.
+    if (!upstream.ok || !upstream.headers.get("content-length")) {
+      const probe = await fetchUpstream(id, quality, "bytes=0-0", "GET");
+      if (probe.status === 206 || probe.status === 200) {
+        const headers = proxyHeaders(probe, quality.label);
+        // Prefer full size from Content-Range: bytes 0-0/TOTAL
+        const cr = probe.headers.get("content-range");
+        const total = cr?.match(/\/(\d+)\s*$/)?.[1];
+        if (total) headers.set("Content-Length", total);
+        // Drain/cancel body — we only need headers for HEAD.
+        void probe.body?.cancel();
+        return new NextResponse(null, { status: 200, headers });
+      }
+    }
     if (!upstream.ok) {
       return new NextResponse(null, { status: upstream.status });
     }

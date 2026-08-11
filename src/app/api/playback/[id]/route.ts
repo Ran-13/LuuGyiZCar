@@ -35,7 +35,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const ads = await readAdsConfig();
-  if (ads.playback?.proxyEnabled === false) {
+  if (ads.playback?.proxyMode === "off") {
     return NextResponse.json(
       { ok: false, proxyDisabled: true, error: "Proxy disabled" },
       { status: 403 },
