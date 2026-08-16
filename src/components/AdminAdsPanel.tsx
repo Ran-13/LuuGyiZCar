@@ -22,6 +22,7 @@ import {
   type AnnouncementDialogItem,
   type NetworkSlotId,
   type NetworkZoneConfig,
+  type VipVideoItem,
 } from "@/lib/ads-types";
 import { slugifyCategory, type Category } from "@/lib/categories";
 import { SORT_ORDERS } from "@/lib/eporner";
@@ -38,6 +39,7 @@ const NAV: AdminNavItem[] = [
   { id: "feed", label: "Video feed" },
   { id: "vpn", label: "VPN wall" },
   { id: "announcement", label: "Announcement" },
+  { id: "vip", label: "VIP videos" },
   { id: "banners", label: "GIF banners" },
   { id: "exoclick", label: "ExoClick" },
   { id: "adsterra", label: "Adsterra" },
@@ -54,6 +56,11 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
   const router = useRouter();
   const [config, setConfig] = useState<AdsConfig>(() => ({
     ...initial,
+    vipVideos: initial.vipVideos ?? {
+      enabled: false,
+      sectionTitle: "VIP Videos",
+      items: [],
+    },
     adsterra: {
       ...initial.adsterra,
       apiKey: "",
@@ -66,7 +73,7 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
   const [adsterraDomains, setAdsterraDomains] = useState<{ id: number; title: string }[]>([]);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<AdSlotId | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
   const [section, setSection] = useState(NAV[0].id);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -294,7 +301,57 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
     }));
   }
 
-  async function onUpload(slot: AdSlotId, file: File | undefined) {
+  function updateVipVideos(patch: Partial<AdsConfig["vipVideos"]>) {
+    setConfig((prev) => ({
+      ...prev,
+      vipVideos: { ...prev.vipVideos, ...patch },
+    }));
+  }
+
+  function updateVipItem(id: string, patch: Partial<VipVideoItem>) {
+    setConfig((prev) => ({
+      ...prev,
+      vipVideos: {
+        ...prev.vipVideos,
+        items: prev.vipVideos.items.map((item) =>
+          item.id === id ? { ...item, ...patch } : item,
+        ),
+      },
+    }));
+  }
+
+  function addVipItem() {
+    setConfig((prev) => ({
+      ...prev,
+      vipVideos: {
+        ...prev.vipVideos,
+        items: [
+          ...prev.vipVideos.items,
+          {
+            id: `vip-${Date.now()}`,
+            enabled: true,
+            title: "",
+            description: "",
+            imageUrl: "",
+            channelLink: "",
+            postLink: "",
+          },
+        ].slice(0, 20),
+      },
+    }));
+  }
+
+  function removeVipItem(id: string) {
+    setConfig((prev) => ({
+      ...prev,
+      vipVideos: {
+        ...prev.vipVideos,
+        items: prev.vipVideos.items.filter((item) => item.id !== id),
+      },
+    }));
+  }
+
+  async function onUpload(slot: string, file: File | undefined, onDone?: (imageUrl: string) => void) {
     if (!file) return;
     setUploading(slot);
     setStatus("");
@@ -315,7 +372,10 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
         setStatus(data.error || "Upload failed");
         return;
       }
-      updateBanner(slot, { imageUrl: data.imageUrl, enabled: true });
+      if (onDone) onDone(data.imageUrl);
+      else if (AD_SLOTS.some((s) => s.id === slot)) {
+        updateBanner(slot as AdSlotId, { imageUrl: data.imageUrl, enabled: true });
+      }
       setStatus("Uploaded");
     } catch {
       setStatus("Upload failed");
@@ -1072,6 +1132,162 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                         />
                       </label>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {section === "vip" && (
+          <section className={panel}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-ink-100">VIP videos</h2>
+                <p className="mt-1 text-sm text-ink-400">
+                  Featured cards on the home page. Layout: custom GIF banner → VIP items → Adsterra
+                  banner. Configure GIF under GIF banners → “VIP section”, and Adsterra under
+                  Adsterra → “under VIP videos”.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-ink-300">
+                <input
+                  type="checkbox"
+                  checked={config.vipVideos.enabled}
+                  onChange={(e) => updateVipVideos({ enabled: e.target.checked })}
+                />
+                Enabled
+              </label>
+            </div>
+
+            <label className={`mt-4 ${labelCls}`}>
+              Section title
+              <input
+                value={config.vipVideos.sectionTitle}
+                onChange={(e) => updateVipVideos({ sectionTitle: e.target.value })}
+                placeholder="VIP Videos"
+                className={field}
+              />
+            </label>
+
+            <div className="mt-5 border-t border-ink-700 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-medium text-ink-100">Items</h3>
+                <button
+                  type="button"
+                  onClick={addVipItem}
+                  className="rounded-md border border-ink-700 px-3 py-1.5 text-sm text-ink-200 hover:bg-ink-800"
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                {config.vipVideos.items.length === 0 && (
+                  <p className="text-sm text-ink-500">No VIP items yet. Click Add.</p>
+                )}
+                {config.vipVideos.items.map((item, idx) => (
+                  <div key={item.id} className="rounded-md border border-ink-700 bg-ink-950 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-ink-100">Item {idx + 1}</p>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 text-sm text-ink-300">
+                          <input
+                            type="checkbox"
+                            checked={item.enabled}
+                            onChange={(e) =>
+                              updateVipItem(item.id, { enabled: e.target.checked })
+                            }
+                          />
+                          On
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeVipItem(item.id)}
+                          className="text-sm text-red-300 hover:text-red-200"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className={`${labelCls} sm:col-span-2`}>
+                        Title
+                        <input
+                          value={item.title}
+                          onChange={(e) => updateVipItem(item.id, { title: e.target.value })}
+                          className={field.replace("bg-ink-950", "bg-ink-900")}
+                        />
+                      </label>
+                      <label className={`${labelCls} sm:col-span-2`}>
+                        Description
+                        <textarea
+                          value={item.description}
+                          onChange={(e) =>
+                            updateVipItem(item.id, { description: e.target.value })
+                          }
+                          rows={3}
+                          className={field.replace("bg-ink-950", "bg-ink-900")}
+                        />
+                      </label>
+                      <label className={`${labelCls} sm:col-span-2`}>
+                        Image upload
+                        <input
+                          type="file"
+                          accept="image/gif,image/jpeg,image/png,image/webp"
+                          onChange={(e) =>
+                            onUpload(`vip-${item.id}`, e.target.files?.[0], (imageUrl) =>
+                              updateVipItem(item.id, { imageUrl }),
+                            )
+                          }
+                          className="mt-1.5 block w-full text-sm text-ink-400 file:mr-3 file:rounded-md file:border-0 file:bg-ink-800 file:px-3 file:py-1.5 file:text-ink-100"
+                        />
+                        {uploading === `vip-${item.id}` && (
+                          <span className="mt-1 block text-xs text-brand-500">Uploading…</span>
+                        )}
+                      </label>
+                      <label className={`${labelCls} sm:col-span-2`}>
+                        Image URL
+                        <input
+                          value={item.imageUrl}
+                          onChange={(e) => updateVipItem(item.id, { imageUrl: e.target.value })}
+                          placeholder="/uploads/ads/…"
+                          className={field.replace("bg-ink-950", "bg-ink-900")}
+                        />
+                      </label>
+                      <label className={labelCls}>
+                        Channel link
+                        <input
+                          value={item.channelLink}
+                          onChange={(e) =>
+                            updateVipItem(item.id, { channelLink: e.target.value })
+                          }
+                          placeholder="https://t.me/…"
+                          className={field.replace("bg-ink-950", "bg-ink-900")}
+                        />
+                      </label>
+                      <label className={labelCls}>
+                        Post link
+                        <input
+                          value={item.postLink}
+                          onChange={(e) => updateVipItem(item.id, { postLink: e.target.value })}
+                          placeholder="https://t.me/…/123"
+                          className={field.replace("bg-ink-950", "bg-ink-900")}
+                        />
+                      </label>
+                    </div>
+
+                    {item.imageUrl && (
+                      <div className="mt-4 overflow-hidden rounded-md border border-ink-700 bg-ink-900 p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title || "Preview"}
+                          className="mx-auto max-h-48 object-contain"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

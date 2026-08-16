@@ -18,6 +18,11 @@ export const AD_SLOTS = [
     label: "Video page — mid banner",
     description: "Below tags, above Related Videos",
   },
+  {
+    id: "vip-below",
+    label: "VIP section — custom banner",
+    description: "Above the VIP video cards on the home page",
+  },
 ] as const;
 
 export type AdSlotId = (typeof AD_SLOTS)[number]["id"];
@@ -327,6 +332,11 @@ export const ADSTERRA_BANNER_SLOTS = [
     label: "Adsterra — video page banner",
     description: "Below the player meta on video pages",
   },
+  {
+    id: "ads-vip-below",
+    label: "Adsterra — under VIP videos",
+    description: "Below the VIP videos block on the home page",
+  },
 ] as const;
 
 export type AdsterraBannerSlotId = (typeof ADSTERRA_BANNER_SLOTS)[number]["id"];
@@ -349,6 +359,24 @@ export interface AdsterraConfig {
   banners: Record<AdsterraBannerSlotId, AdsterraBannerUnit>;
 }
 
+/** Featured VIP promo cards on the home page (Telegram channel / post links). */
+export interface VipVideoItem {
+  id: string;
+  enabled: boolean;
+  title: string;
+  description: string;
+  imageUrl: string;
+  channelLink: string;
+  postLink: string;
+}
+
+export interface VipVideosConfig {
+  enabled: boolean;
+  /** Optional heading above the VIP cards. Empty = no section title. */
+  sectionTitle: string;
+  items: VipVideoItem[];
+}
+
 export interface AdsConfig {
   site: SiteConfig;
   announcement: AnnouncementConfig;
@@ -357,6 +385,8 @@ export interface AdsConfig {
   network: AdNetworkConfig;
   /** Adsterra layer — independent of ExoClick. */
   adsterra: AdsterraConfig;
+  /** Home VIP videos promo block. */
+  vipVideos: VipVideosConfig;
   vpnWall: VpnWallConfig;
   /** VPS stream proxy for the video player. */
   playback: PlaybackConfig;
@@ -411,6 +441,12 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       linkUrl: "",
       alt: "Advertisement",
     },
+    "vip-below": {
+      enabled: false,
+      imageUrl: "",
+      linkUrl: "",
+      alt: "Advertisement",
+    },
   },
   // Everything off by default: an existing deployment picks up this key on the
   // next read and renders exactly as it did before.
@@ -456,7 +492,13 @@ export const DEFAULT_ADS_CONFIG: AdsConfig = {
       "ads-home-top": { enabled: false, key: "", width: 300, height: 250, invokeHost: "" },
       "ads-home-bottom": { enabled: false, key: "", width: 300, height: 100, invokeHost: "" },
       "ads-video-below": { enabled: false, key: "", width: 300, height: 250, invokeHost: "" },
+      "ads-vip-below": { enabled: false, key: "", width: 300, height: 250, invokeHost: "" },
     },
+  },
+  vipVideos: {
+    enabled: false,
+    sectionTitle: "VIP Videos",
+    items: [],
   },
   vpnWall: {
     enabled: false,

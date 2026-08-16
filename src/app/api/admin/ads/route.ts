@@ -163,6 +163,26 @@ export async function PUT(request: Request) {
       const apiKey = typedKey || current.adsterra?.apiKey || "";
       return { ...incoming, apiKey };
     })(),
+    vipVideos: body.vipVideos
+      ? {
+          enabled: Boolean(body.vipVideos.enabled),
+          sectionTitle: String(body.vipVideos.sectionTitle ?? current.vipVideos.sectionTitle),
+          items: Array.isArray(body.vipVideos.items)
+            ? body.vipVideos.items.map((item, index) => ({
+                id:
+                  typeof item?.id === "string" && item.id.trim()
+                    ? item.id.trim()
+                    : `vip-${index + 1}`,
+                enabled: item?.enabled !== false,
+                title: String(item?.title ?? ""),
+                description: String(item?.description ?? ""),
+                imageUrl: String(item?.imageUrl ?? "").trim(),
+                channelLink: String(item?.channelLink ?? "").trim(),
+                postLink: String(item?.postLink ?? "").trim(),
+              }))
+            : current.vipVideos.items,
+        }
+      : current.vipVideos,
     vpnWall: {
       enabled: Boolean(body.vpnWall?.enabled ?? current.vpnWall.enabled),
       blockedCountries: Array.isArray(body.vpnWall?.blockedCountries)

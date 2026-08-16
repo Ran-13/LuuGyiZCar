@@ -35,6 +35,8 @@ import {
   type NetworkZoneConfig,
   type PlaybackConfig,
   type SiteConfig,
+  type VipVideoItem,
+  type VipVideosConfig,
   type VpnWallConfig,
 } from "@/lib/ads-types";
 import { DEFAULT_CATEGORIES, slugifyCategory, type Category } from "@/lib/categories";
@@ -57,6 +59,8 @@ export type {
   NetworkZoneConfig,
   PlaybackConfig,
   SiteConfig,
+  VipVideoItem,
+  VipVideosConfig,
   VpnWallConfig,
 };
 export {
@@ -315,6 +319,34 @@ function normalizeDialog(
   };
 }
 
+function normalizeVipVideoItem(
+  raw: Partial<VipVideoItem> | undefined,
+  fallbackId: string,
+): VipVideoItem {
+  return {
+    id: typeof raw?.id === "string" && raw.id.trim() ? raw.id.trim() : fallbackId,
+    enabled: raw?.enabled !== false,
+    title: typeof raw?.title === "string" ? raw.title.trim() : "",
+    description: typeof raw?.description === "string" ? raw.description : "",
+    imageUrl: typeof raw?.imageUrl === "string" ? raw.imageUrl.trim() : "",
+    channelLink: typeof raw?.channelLink === "string" ? raw.channelLink.trim() : "",
+    postLink: typeof raw?.postLink === "string" ? raw.postLink.trim() : "",
+  };
+}
+
+function normalizeVipVideos(raw: Partial<VipVideosConfig> | undefined): VipVideosConfig {
+  const defaults = DEFAULT_ADS_CONFIG.vipVideos;
+  const incoming = Array.isArray(raw?.items) ? raw.items : [];
+  return {
+    enabled: Boolean(raw?.enabled),
+    sectionTitle:
+      typeof raw?.sectionTitle === "string" ? raw.sectionTitle.trim() : defaults.sectionTitle,
+    items: incoming
+      .map((item, index) => normalizeVipVideoItem(item, `vip-${index + 1}`))
+      .slice(0, 20),
+  };
+}
+
 function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig {
   const site: Partial<SiteConfig> = raw?.site ?? {};
   const announcement: Partial<AnnouncementConfig> = raw?.announcement ?? {};
@@ -398,6 +430,7 @@ function normalizeConfig(raw: Partial<AdsConfig> | null | undefined): AdsConfig 
     banners,
     network: normalizeNetwork(raw?.network),
     adsterra: normalizeAdsterra(raw?.adsterra),
+    vipVideos: normalizeVipVideos(raw?.vipVideos),
     vpnWall: normalizeVpnWall(raw?.vpnWall),
     playback: normalizePlayback(raw?.playback),
     feed: normalizeFeed(raw?.feed),

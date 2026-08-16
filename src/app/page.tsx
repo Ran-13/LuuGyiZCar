@@ -10,6 +10,7 @@ import GridSkeleton from "@/components/GridSkeleton";
 import HomeAnnouncement from "@/components/HomeAnnouncement";
 import InfiniteVideoGrid from "@/components/InfiniteVideoGrid";
 import SectionHeading from "@/components/SectionHeading";
+import VipVideosSection from "@/components/VipVideosSection";
 import { readAdsConfig } from "@/lib/ads";
 import {
   isSortOrder,
@@ -100,6 +101,12 @@ export default async function HomePage() {
 
       <ExoClickZone network={ads.network} slot="net-home-top" className="mb-6" />
       <AdsterraBanner adsterra={ads.adsterra} slot="ads-home-top" className="mb-6" />
+
+      <VipVideosSection
+        vip={ads.vipVideos}
+        adsterra={ads.adsterra}
+        customBanner={ads.banners["vip-below"]}
+      />
 
       <SectionHeading as="h1" title={feed.homeTitle} subtitle={feed.homeSubtitle} />
 
