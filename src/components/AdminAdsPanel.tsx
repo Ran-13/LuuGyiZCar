@@ -361,24 +361,24 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
         credentials: "same-origin",
         headers: {
           "Content-Type": file.type || "application/octet-stream",
-          "X-Upload-Filename": file.name,
+          "X-Upload-Filename": encodeURIComponent(file.name),
           "X-Upload-Type": file.type || "application/octet-stream",
           "X-Upload-Slot": slot,
         },
         body: file,
       });
-      const data = (await res.json()) as { imageUrl?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
       if (!res.ok || !data.imageUrl) {
-        setStatus(data.error || "Upload failed");
+        setStatus(data.error || `Upload failed (${res.status})`);
         return;
       }
       if (onDone) onDone(data.imageUrl);
       else if (AD_SLOTS.some((s) => s.id === slot)) {
         updateBanner(slot as AdSlotId, { imageUrl: data.imageUrl, enabled: true });
       }
-      setStatus("Uploaded");
+      setStatus("Uploaded — click Save to publish");
     } catch {
-      setStatus("Upload failed");
+      setStatus("Upload failed — check file type (JPG/PNG/GIF/WebP) and server permissions");
     } finally {
       setUploading(null);
     }
@@ -1235,17 +1235,22 @@ export default function AdminAdsPanel({ initial }: AdminAdsPanelProps) {
                         Image upload
                         <input
                           type="file"
-                          accept="image/gif,image/jpeg,image/png,image/webp"
-                          onChange={(e) =>
-                            onUpload(`vip-${item.id}`, e.target.files?.[0], (imageUrl) =>
+                          accept="image/gif,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                          onChange={(e) => {
+                            const uploadKey = `vipimg-${idx + 1}`;
+                            onUpload(uploadKey, e.target.files?.[0], (imageUrl) =>
                               updateVipItem(item.id, { imageUrl }),
-                            )
-                          }
+                            );
+                          }}
                           className="mt-1.5 block w-full text-sm text-ink-400 file:mr-3 file:rounded-md file:border-0 file:bg-ink-800 file:px-3 file:py-1.5 file:text-ink-100"
                         />
-                        {uploading === `vip-${item.id}` && (
+                        {uploading === `vipimg-${idx + 1}` && (
                           <span className="mt-1 block text-xs text-brand-500">Uploading…</span>
                         )}
+                        <span className="mt-1 block text-xs text-ink-500">
+                          JPG / PNG / GIF / WebP only. iPhone HEIC မရ — Photos က JPG သို့ ပြောင်းပြီးမှ တင်ပါ။
+                          Upload ပြီး Save နှိပ်ပါ။
+                        </span>
                       </label>
                       <label className={`${labelCls} sm:col-span-2`}>
                         Image URL

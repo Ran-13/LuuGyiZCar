@@ -112,19 +112,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status });
   }
 
-  if (!ALLOWED.has(upload.mimeType)) {
+  const sniffed = sniffImageType(upload.buffer);
+  if (!sniffed) {
+    return NextResponse.json(
+      {
+        error:
+          "Not a valid image. Use JPG, PNG, GIF, or WebP (iPhone HEIC is not supported — convert to JPG first).",
+      },
+      { status: 400 },
+    );
+  }
+
+  // Trust magic bytes over the client Content-Type (octet-stream / image/jpg / mismatches).
+  const mimeType = sniffed;
+
+  if (!ALLOWED.has(mimeType)) {
     return NextResponse.json(
       { error: "Only GIF, JPG, PNG, or WebP allowed" },
       { status: 400 },
     );
   }
 
-  const sniffed = sniffImageType(upload.buffer);
-  if (!sniffed || sniffed !== upload.mimeType) {
-    return NextResponse.json({ error: "File content is not a valid image" }, { status: 400 });
-  }
-
-  const slot = upload.slot.replace(/[^a-z0-9-]/gi, "");
+  const slot = (upload.slot || "banner").replace(/[^a-z0-9-]/gi, "").slice(0, 40) || "banner";
   await mkdir(UPLOAD_DIR, { recursive: true });
 
   // ── Optimize the image for fast loading ────────────────────────────
@@ -151,7 +160,7 @@ export async function POST(request: Request) {
         .webp({ quality: 75, effort: 4, loop: meta.loop ?? 0 })
         .toBuffer();
       ext = "webp";
-    } else if (sniffed === "image/gif" || sniffed === "image/png") {
+    } else if (mimeType === "image/gif" || mimeType === "image/png") {
       // Static GIF/PNG → WebP (much smaller, lossless-ish)
       const pipeline = meta.width && meta.width > MAX_WIDTH
         ? img.resize({ width: MAX_WIDTH, withoutEnlargement: true })
@@ -160,7 +169,7 @@ export async function POST(request: Request) {
         .webp({ quality: 85, effort: 4 })
         .toBuffer();
       ext = "webp";
-    } else if (sniffed === "image/jpeg") {
+    } else if (mimeType === "image/jpeg") {
       // JPEG → optimized JPEG
       const pipeline = meta.width && meta.width > MAX_WIDTH
         ? img.resize({ width: MAX_WIDTH, withoutEnlargement: true })
@@ -179,8 +188,9 @@ export async function POST(request: Request) {
         .toBuffer();
       ext = "webp";
     }
-  } catch {
-    // If sharp fails (corrupt file, etc.), save the original
+  } catch (error) {
+    // If sharp fails (corrupt file, etc.), save the original when sniffed is usable
+    console.error("[upload] sharp failed, saving original:", error);
     optimized = upload.buffer;
     ext = EXT[sniffed];
   }
